@@ -9,6 +9,7 @@ function Questions() {
   const [myQuestions, setMyQuestions] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'my'
   const [showUnsolvedOnly, setShowUnsolvedOnly] = useState(false);
+  const [unsolvedCount, setUnsolvedCount] = useState(0);
   const [newQuestion, setNewQuestion] = useState('');
   const [replyTexts, setReplyTexts] = useState({});
   const [showReply, setShowReply] = useState({});
@@ -55,6 +56,11 @@ function Questions() {
   useEffect(() => {
     refreshAll();
   }, []);
+
+  useEffect(() => {
+    const count = questions.filter(q => !q.replies || q.replies.length === 0 || !q.replies.some(r => r.isSolution)).length;
+    setUnsolvedCount(count);
+  }, [questions]);
 
   const handlePostQuestion = async (e) => {
     e.preventDefault();
@@ -332,33 +338,33 @@ function Questions() {
           >
             My Questions ({myQuestions.length})
           </button>
-          {activeTab === 'all' && (
-            <button
-              onClick={() => setShowUnsolvedOnly(v => !v)}
-              style={{
-                padding: '0.5rem 1.25rem',
-                borderRadius: '20px',
-                border: 'none',
-                cursor: 'pointer',
-                fontWeight: showUnsolvedOnly ? 'bold' : 'normal',
-                background: showUnsolvedOnly ? '#f39c12' : '#e0e0e0',
-                color: showUnsolvedOnly ? 'white' : '#333',
-                transition: 'all 0.2s'
-              }}
-            >
-              Unsolved {!showUnsolvedOnly && `(Show)`}
-            </button>
-          )}
+          <button
+            onClick={() => setShowUnsolvedOnly(v => !v)}
+            style={{
+              padding: '0.5rem 1.25rem',
+              borderRadius: '20px',
+              border: 'none',
+              cursor: 'pointer',
+              fontWeight: showUnsolvedOnly ? 'bold' : 'normal',
+              background: showUnsolvedOnly ? '#f39c12' : '#e0e0e0',
+              color: showUnsolvedOnly ? 'white' : '#333',
+              transition: 'all 0.2s'
+            }}
+          >
+            Unsolved ({unsolvedCount}) {!showUnsolvedOnly && `(Show)`}
+          </button>
         </div>
       </div>
       
       {getDisplayedQuestions().length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          {activeTab === 'my'
+          {activeTab === 'my' && !showUnsolvedOnly
             ? "You haven't asked any questions yet."
-            : showUnsolvedOnly
-              ? 'No unsolved questions — all have been answered!'
-              : 'No questions yet. Be the first to ask!'
+            : showUnsolvedOnly && activeTab === 'my'
+              ? 'You have no unsolved questions!'
+              : showUnsolvedOnly
+                ? 'No unsolved questions — all have been answered!'
+                : 'No questions yet. Be the first to ask!'
           }
         </div>
       ) : (

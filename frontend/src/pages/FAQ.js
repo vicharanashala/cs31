@@ -116,12 +116,12 @@ function FAQ() {
   return (
     <div className="container">
       <div style={{
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        background: 'linear-gradient(135deg, #23233a 0%, #1a1a2e 100%)',
+        border: '1px solid #2e2e4a',
         borderRadius: '12px',
         padding: '2rem',
         marginBottom: '2rem',
-        color: 'white',
-        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+        color: 'white'
       }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: '600', marginBottom: '0.5rem' }}>
           {greeting.text}, {userName || storedUser.name} {greeting.emoji}
@@ -150,10 +150,21 @@ function FAQ() {
       <div style={{ marginBottom: '1.5rem' }}>
         <input
           type="text"
-          placeholder="🔍 Search FAQs..."
+          placeholder="Search FAQs..."
           value={search}
           onChange={handleSearchChange}
-          style={{ width: '100%', padding: '0.75rem', borderRadius: '4px', border: '1px solid #ddd', marginBottom: '1rem' }}
+          style={{
+            width: '100%',
+            padding: '0.75rem 1rem',
+            borderRadius: '8px',
+            border: '1px solid #2e2e4a',
+            background: '#1a1a2e',
+            color: '#e2e8f0',
+            fontSize: '0.9rem',
+            outline: 'none',
+            marginBottom: '1rem',
+            boxSizing: 'border-box'
+          }}
         />
         
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -190,11 +201,11 @@ function FAQ() {
       ) : (
         Object.entries(groupedFaqs).map(([section, sectionFaqs]) => (
           <div key={section} style={{ marginBottom: '2rem' }}>
-            <h2 style={{ 
-              marginBottom: '1rem', 
-              paddingBottom: '0.5rem', 
-              borderBottom: '2px solid #1a1a2e',
-              color: '#1a1a2e'
+            <h2 style={{
+              marginBottom: '1rem',
+              paddingBottom: '0.5rem',
+              borderBottom: `2px solid ${'#2e2e4a'}`,
+              color: '#e2e8f0'
             }}>
               {section}
             </h2>
@@ -203,8 +214,8 @@ function FAQ() {
                 key={faq._id}
                 className="faq-item"
                 style={faq._id === highlightedFaqId ? {
-                  borderLeft: '5px solid #4CAF50',
-                  background: '#f1fff4'
+                  borderLeft: '4px solid #34d399',
+                  background: 'rgba(52,211,153,0.06)'
                 } : undefined}
               >
                 <h3>{faq.question}</h3>

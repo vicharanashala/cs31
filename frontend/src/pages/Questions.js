@@ -8,6 +8,7 @@ function Questions() {
   const [questions, setQuestions] = useState([]);
   const [myQuestions, setMyQuestions] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' | 'my'
+  const [showUnsolvedOnly, setShowUnsolvedOnly] = useState(false);
   const [newQuestion, setNewQuestion] = useState('');
   const [replyTexts, setReplyTexts] = useState({});
   const [showReply, setShowReply] = useState({});
@@ -45,8 +46,14 @@ function Questions() {
     fetchMyQuestions();
   };
 
+  const getDisplayedQuestions = () => {
+    const source = activeTab === 'all' ? questions : myQuestions;
+    if (!showUnsolvedOnly) return source;
+    return source.filter(q => !q.replies || q.replies.length === 0 || !q.replies.some(r => r.isSolution));
+  };
+
   useEffect(() => {
-    fetchQuestions();
+    refreshAll();
   }, []);
 
   const handlePostQuestion = async (e) => {
@@ -325,19 +332,37 @@ function Questions() {
           >
             My Questions ({myQuestions.length})
           </button>
+          {activeTab === 'all' && (
+            <button
+              onClick={() => setShowUnsolvedOnly(v => !v)}
+              style={{
+                padding: '0.5rem 1.25rem',
+                borderRadius: '20px',
+                border: 'none',
+                cursor: 'pointer',
+                fontWeight: showUnsolvedOnly ? 'bold' : 'normal',
+                background: showUnsolvedOnly ? '#f39c12' : '#e0e0e0',
+                color: showUnsolvedOnly ? 'white' : '#333',
+                transition: 'all 0.2s'
+              }}
+            >
+              Unsolved {!showUnsolvedOnly && `(Show)`}
+            </button>
+          )}
         </div>
       </div>
       
-      {activeTab === 'all' && questions.length === 0 ? (
+      {getDisplayedQuestions().length === 0 ? (
         <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          No questions yet. Be the first to ask!
-        </div>
-      ) : activeTab === 'my' && myQuestions.length === 0 ? (
-        <div className="card" style={{ textAlign: 'center', color: '#666' }}>
-          You haven't asked any questions yet.
+          {activeTab === 'my'
+            ? "You haven't asked any questions yet."
+            : showUnsolvedOnly
+              ? 'No unsolved questions — all have been answered!'
+              : 'No questions yet. Be the first to ask!'
+          }
         </div>
       ) : (
-        (activeTab === 'all' ? questions : myQuestions).map((q) => (
+        getDisplayedQuestions().map((q) => (
           <div key={q._id} className="card" style={{ marginBottom: '1rem', borderLeft: `4px solid ${q.status === 'pending' ? '#f39c12' : q.status === 'rejected' ? '#e74c3c' : '#667eea'}` }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <div style={{ flex: 1 }}>

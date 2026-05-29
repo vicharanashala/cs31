@@ -4,62 +4,60 @@ const Question = require('../models/Question');
 const FAQ = require('../models/FAQ');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
-const natural = require('natural');
+const {
+  DUPLICATE_CONFIDENCE_THRESHOLD,
+  compareQuestions,
+  POSSIBLE_MATCH_THRESHOLD
+} = require('../utils/duplicateDetection');
 
-const SIMILARITY_THRESHOLD = 0.3;
 const UPVOTE_THRESHOLD = 3;
 
-const tokenizer = new natural.WordTokenizer();
-const TfIdf = natural.TfIdf;
-const doc2 = new TfIdf();
-const doc1 = new TfIdf();
-
-function preprocessText(str) {
-  return str.toLowerCase().trim()
-    .replace(/[^\w\s]/g, ' ')
-    .replace(/\s+/g, ' ');
+function hasObjectId(items, userId) {
+  if (!items) return false;
+  return items.some(id => id.toString() === userId);
 }
 
-function calculateTFIDFSimilarity(str1, str2) {
-  const s1 = preprocessText(str1);
-  const s2 = preprocessText(str2);
-  
-  if (s1 === s2) return 1;
-  if (s1.includes(s2) || s2.includes(s1)) return 0.95;
-  
-  const tfidf = new natural.TfIdf();
-  
-  tfidf.addDocument(s1);
-  tfidf.addDocument(s2);
-  
-  const terms = new Set([
-    ...tokenizer.tokenize(s1),
-    ...tokenizer.tokenize(s2)
-  ].filter(t => t.length > 2));
-  
-  if (terms.size === 0) return 0;
-  
-  const vec1 = [];
-  const vec2 = [];
-  
-  terms.forEach(term => {
-    const idx = tfidf.listTerms(0).findIndex(t => t.term === term);
-    vec1.push(idx >= 0 ? tfidf.tfidf(term, 0) : 0);
-    const idx2 = tfidf.listTerms(1).findIndex(t => t.term === term);
-    vec2.push(idx2 >= 0 ? tfidf.tfidf(term, 1) : 0);
-  });
-  
-  const dotProduct = vec1.reduce((sum, v, i) => sum + v * vec2[i], 0);
-  const magnitude1 = Math.sqrt(vec1.reduce((sum, v) => sum + v * v, 0));
-  const magnitude2 = Math.sqrt(vec2.reduce((sum, v) => sum + v * v, 0));
-  
-  if (magnitude1 === 0 || magnitude2 === 0) return 0;
-  
-  return dotProduct / (magnitude1 * magnitude2);
+function removeObjectId(items, userId) {
+  if (!items) return [];
+  return items.filter(id => id.toString() !== userId);
 }
 
-function calculateSimilarity(str1, str2) {
-  return calculateTFIDFSimilarity(str1, str2);
+function syncQuestionVoteCounts(question) {
+  question.upvotes = question.upvotes || [];
+  question.downvotes = question.downvotes || [];
+  question.upvoteCount = question.upvotes.length;
+  question.downvoteCount = question.downvotes.length;
+}
+
+function syncReplyVoteCounts(reply) {
+  reply.upvotes = reply.upvotes || [];
+  reply.downvotes = reply.downvotes || [];
+  reply.upvoteCount = reply.upvotes.length;
+  reply.downvoteCount = reply.downvotes.length;
+}
+
+function populateQuestion(questionId) {
+  return Question.findById(questionId)
+    .populate('createdBy', 'name email role')
+    .populate('replies.createdBy', 'name email role')
+    .populate('replies.upvotes', 'name email')
+    .populate('replies.downvotes', 'name email')
+    .populate('replies.markedSolutionBy', 'name email role')
+    .populate('upvotes', 'name email')
+    .populate('downvotes', 'name email');
+}
+
+function serializeSimilarMatch(match) {
+  return {
+    confidence: match.confidence,
+    id: match.data._id,
+    isDuplicate: match.isDuplicate,
+    question: match.data.question,
+    reasons: match.reasons,
+    similarity: match.confidence,
+    score: match.score,
+    type: match.type
+  };
 }
 
 function findAllSimilarQuestions(questionText, excludeId = null) {
@@ -72,20 +70,20 @@ function findAllSimilarQuestions(questionText, excludeId = null) {
       const allSimilar = [];
       
       for (const faq of faqs) {
-        const sim = calculateSimilarity(questionText, faq.question);
-        if (sim >= SIMILARITY_THRESHOLD) {
-          allSimilar.push({ type: 'faq', data: faq, similarity: sim });
+        const match = compareQuestions(questionText, faq.question);
+        if (match.score >= POSSIBLE_MATCH_THRESHOLD) {
+          allSimilar.push({ type: 'faq', data: faq, ...match });
         }
       }
       
       for (const q of questions) {
-        const sim = calculateSimilarity(questionText, q.question);
-        if (sim >= SIMILARITY_THRESHOLD) {
-          allSimilar.push({ type: 'question', data: q, similarity: sim });
+        const match = compareQuestions(questionText, q.question);
+        if (match.score >= POSSIBLE_MATCH_THRESHOLD) {
+          allSimilar.push({ type: 'question', data: q, ...match });
         }
       }
       
-      allSimilar.sort((a, b) => b.similarity - a.similarity);
+      allSimilar.sort((a, b) => b.score - a.score);
       resolve(allSimilar.slice(0, 5));
     } catch (err) {
       console.error('Similarity error:', err);
@@ -108,9 +106,13 @@ function findSimilarQuestion(questionText, excludeId = null) {
 router.get('/', async (req, res) => {
   try {
     const questions = await Question.find()
-      .populate('createdBy', 'name email')
-      .populate('replies.createdBy', 'name email')
+      .populate('createdBy', 'name email role')
+      .populate('replies.createdBy', 'name email role')
+      .populate('replies.upvotes', 'name email')
+      .populate('replies.downvotes', 'name email')
+      .populate('replies.markedSolutionBy', 'name email role')
       .populate('upvotes', 'name email')
+      .populate('downvotes', 'name email')
       .sort({ upvoteCount: -1, createdAt: -1 });
     res.json(questions);
   } catch (err) {
@@ -118,8 +120,26 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get current user's own questions
+router.get('/my', auth, async (req, res) => {
+  try {
+    const questions = await Question.find({ createdBy: req.user.id })
+      .populate('createdBy', 'name email role')
+      .populate('replies.createdBy', 'name email role')
+      .populate('replies.upvotes', 'name email')
+      .populate('replies.downvotes', 'name email')
+      .populate('replies.markedSolutionBy', 'name email role')
+      .populate('upvotes', 'name email')
+      .populate('downvotes', 'name email')
+      .sort({ createdAt: -1 });
+    res.json(questions);
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 router.post('/', auth, async (req, res) => {
-  const { question } = req.body;
+  const { question, confirmSimilar = false } = req.body;
   
   if (!question || question.trim().length === 0) {
     return res.status(400).json({ message: 'Question is required' });
@@ -128,29 +148,43 @@ router.post('/', auth, async (req, res) => {
   try {
     const allSimilar = await findAllSimilarQuestions(question);
     const bestMatch = allSimilar.length > 0 ? allSimilar[0] : null;
+    const duplicateMatches = allSimilar.filter(match => match.isDuplicate);
+    
+    if (duplicateMatches.length > 0) {
+      return res.status(409).json({
+        duplicate: true,
+        hasMatch: true,
+        message: `Questions more than ${DUPLICATE_CONFIDENCE_THRESHOLD}% similar cannot be posted.`,
+        similarQuestions: duplicateMatches.slice(0, 3).map(serializeSimilarMatch)
+      });
+    }
+
+    if (allSimilar.length > 0 && !confirmSimilar) {
+      return res.json({
+        hasMatch: true,
+        requiresConfirmation: true,
+        message: 'Similar questions found. Review them first, then post again if your question is still different.',
+        similarQuestions: allSimilar.slice(0, 3).map(serializeSimilarMatch)
+      });
+    }
     
     const newQuestion = new Question({
       question: question.trim(),
       createdBy: req.user.id,
-      similarity: bestMatch ? bestMatch.similarity : 0,
-      similarTo: bestMatch ? bestMatch.data._id : null
+      similarity: bestMatch ? bestMatch.score : 0,
+      similarityPercent: bestMatch ? bestMatch.confidence : 0,
+      similarTo: bestMatch ? bestMatch.data._id : null,
+      similarToType: bestMatch ? bestMatch.type : null
     });
     
     await newQuestion.save();
     
-    const populatedQuestion = await Question.findById(newQuestion._id)
-      .populate('createdBy', 'name email');
+    const populatedQuestion = await populateQuestion(newQuestion._id);
     
     if (allSimilar.length > 0) {
-      const similarInfo = allSimilar.slice(0, 3).map(s => ({
-        similarity: Math.round(s.similarity * 100),
-        type: s.type,
-        question: s.data.question,
-        id: s.data._id
-      }));
       return res.status(201).json({
         question: populatedQuestion,
-        similarQuestions: similarInfo,
+        similarQuestions: allSimilar.slice(0, 3).map(serializeSimilarMatch),
         hasMatch: true
       });
     }
@@ -169,15 +203,16 @@ router.post('/:id/upvote', auth, async (req, res) => {
       return res.status(404).json({ message: 'Question not found' });
     }
     
-    const alreadyUpvoted = question.upvotes.includes(req.user.id);
+    const alreadyUpvoted = hasObjectId(question.upvotes, req.user.id);
     
     if (alreadyUpvoted) {
-      question.upvotes = question.upvotes.filter(id => id.toString() !== req.user.id);
-      question.upvoteCount = question.upvotes.length;
+      question.upvotes = removeObjectId(question.upvotes, req.user.id);
     } else {
+      question.downvotes = removeObjectId(question.downvotes, req.user.id);
       question.upvotes.push(req.user.id);
-      question.upvoteCount = question.upvotes.length;
     }
+
+    syncQuestionVoteCounts(question);
     
     await question.save();
     
@@ -186,10 +221,7 @@ router.post('/:id/upvote', auth, async (req, res) => {
       await question.save();
     }
     
-    const populatedQuestion = await Question.findById(question._id)
-      .populate('createdBy', 'name email')
-      .populate('replies.createdBy', 'name email')
-      .populate('upvotes', 'name email');
+    const populatedQuestion = await populateQuestion(question._id);
     
     res.json({
       question: populatedQuestion,
@@ -198,6 +230,37 @@ router.post('/:id/upvote', auth, async (req, res) => {
   } catch (err) {
     console.error('Upvote Error:', err);
     res.status(500).json({ message: 'Error upvoting question' });
+  }
+});
+
+router.post('/:id/downvote', auth, async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const alreadyDownvoted = hasObjectId(question.downvotes, req.user.id);
+
+    if (alreadyDownvoted) {
+      question.downvotes = removeObjectId(question.downvotes, req.user.id);
+    } else {
+      question.upvotes = removeObjectId(question.upvotes, req.user.id);
+      question.downvotes.push(req.user.id);
+    }
+
+    syncQuestionVoteCounts(question);
+    await question.save();
+
+    const populatedQuestion = await populateQuestion(question._id);
+
+    res.json({
+      question: populatedQuestion,
+      action: alreadyDownvoted ? 'removed' : 'added'
+    });
+  } catch (err) {
+    console.error('Downvote Error:', err);
+    res.status(500).json({ message: 'Error downvoting question' });
   }
 });
 
@@ -221,15 +284,111 @@ router.post('/:id/reply', auth, async (req, res) => {
     
     await question.save();
     
-    const populatedQuestion = await Question.findById(question._id)
-      .populate('createdBy', 'name email')
-      .populate('replies.createdBy', 'name email')
-      .populate('upvotes', 'name email');
+    const populatedQuestion = await populateQuestion(question._id);
     
     res.status(201).json(populatedQuestion);
   } catch (err) {
     console.error('Reply Error:', err);
     res.status(500).json({ message: 'Error adding reply' });
+  }
+});
+
+router.post('/:id/replies/:replyId/upvote', auth, async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    const alreadyUpvoted = hasObjectId(reply.upvotes, req.user.id);
+
+    if (alreadyUpvoted) {
+      reply.upvotes = removeObjectId(reply.upvotes, req.user.id);
+    } else {
+      reply.downvotes = removeObjectId(reply.downvotes, req.user.id);
+      reply.upvotes.push(req.user.id);
+    }
+
+    syncReplyVoteCounts(reply);
+    await question.save();
+
+    res.json(await populateQuestion(question._id));
+  } catch (err) {
+    console.error('Reply Upvote Error:', err);
+    res.status(500).json({ message: 'Error upvoting reply' });
+  }
+});
+
+router.post('/:id/replies/:replyId/downvote', auth, async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    const alreadyDownvoted = hasObjectId(reply.downvotes, req.user.id);
+
+    if (alreadyDownvoted) {
+      reply.downvotes = removeObjectId(reply.downvotes, req.user.id);
+    } else {
+      reply.upvotes = removeObjectId(reply.upvotes, req.user.id);
+      reply.downvotes.push(req.user.id);
+    }
+
+    syncReplyVoteCounts(reply);
+    await question.save();
+
+    res.json(await populateQuestion(question._id));
+  } catch (err) {
+    console.error('Reply Downvote Error:', err);
+    res.status(500).json({ message: 'Error downvoting reply' });
+  }
+});
+
+router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const user = await User.findById(req.user.id);
+    const isAsker = question.createdBy?.toString() === req.user.id;
+    const isAdmin = user?.role === 'admin';
+
+    if (!isAsker && !isAdmin) {
+      return res.status(403).json({ message: 'Only the asker or an admin can mark a solution' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    const shouldMark = !reply.isSolution;
+    question.replies.forEach(existingReply => {
+      existingReply.isSolution = false;
+      existingReply.markedSolutionBy = null;
+    });
+    reply.isSolution = shouldMark;
+    reply.markedSolutionBy = shouldMark ? req.user.id : null;
+
+    await question.save();
+
+    res.json(await populateQuestion(question._id));
+  } catch (err) {
+    console.error('Mark Solution Error:', err);
+    res.status(500).json({ message: 'Error marking solution' });
   }
 });
 
@@ -241,8 +400,12 @@ router.get('/pending', auth, async (req, res) => {
     }
     
     const questions = await Question.find({ status: 'pending' })
-      .populate('createdBy', 'name email')
-      .populate('replies.createdBy', 'name email')
+      .populate('createdBy', 'name email role')
+      .populate('replies.createdBy', 'name email role')
+      .populate('replies.upvotes', 'name email')
+      .populate('replies.downvotes', 'name email')
+      .populate('upvotes', 'name email')
+      .populate('downvotes', 'name email')
       .sort({ upvoteCount: -1, createdAt: -1 });
     
     res.json(questions);
@@ -312,7 +475,11 @@ router.post('/check-similarity', auth, async (req, res) => {
     if (similar) {
       res.json({
         hasSimilar: true,
-        similarity: similar.similarity,
+        confidence: similar.confidence,
+        isDuplicate: similar.isDuplicate,
+        reasons: similar.reasons,
+        similarity: similar.score,
+        score: similar.score,
         type: similar.type,
         similarQuestion: similar.type === 'faq' ? {
           _id: similar.data._id,

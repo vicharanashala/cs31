@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useSearchParams } from 'react-router-dom';
+
+const HIGHLIGHT_MESSAGE = 'Showing the FAQ that looks similar to your question.';
 
 function FAQ() {
   const [faqs, setFaqs] = useState([]);
@@ -8,6 +11,9 @@ function FAQ() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState('');
   const [userName, setUserName] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const highlightedFaqId = searchParams.get('faq');
 
   const token = localStorage.getItem('token');
   const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -43,6 +49,15 @@ function FAQ() {
 
   const fetchFAQs = async () => {
     try {
+      if (highlightedFaqId) {
+        const res = await axios.get(`/api/faqs/${highlightedFaqId}`);
+        setFaqs([res.data]);
+        setMessage(HIGHLIGHT_MESSAGE);
+        return;
+      }
+
+      if (message === HIGHLIGHT_MESSAGE) setMessage('');
+
       const params = {};
       if (selectedSection) params.section = selectedSection;
       if (search) params.search = search;
@@ -64,7 +79,7 @@ function FAQ() {
 
   useEffect(() => {
     fetchFAQs();
-  }, [selectedSection, search]);
+  }, [selectedSection, search, highlightedFaqId]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('Delete this FAQ?')) return;
@@ -86,7 +101,15 @@ function FAQ() {
   }, {});
 
   const handleSearchChange = (e) => {
+    if (highlightedFaqId) setSearchParams({});
     setSearch(e.target.value);
+    setSelectedSection('');
+  };
+
+  const clearHighlightedFAQ = () => {
+    setSearchParams({});
+    setMessage('');
+    setSearch('');
     setSelectedSection('');
   };
 
@@ -111,6 +134,16 @@ function FAQ() {
       {message && (
         <div className={`alert ${message.includes('Error') ? 'alert-error' : 'alert-success'}`}>
           {message}
+          {highlightedFaqId && (
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={clearHighlightedFAQ}
+              style={{ marginLeft: '1rem', width: 'auto' }}
+            >
+              Show all FAQs
+            </button>
+          )}
         </div>
       )}
 
@@ -126,7 +159,7 @@ function FAQ() {
         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button
             className={`btn ${selectedSection === '' ? 'btn-primary' : 'btn-secondary'}`}
-            onClick={() => setSelectedSection('')}
+            onClick={() => { setSearchParams({}); setSelectedSection(''); }}
             style={{ padding: '0.5rem 1rem' }}
           >
             All
@@ -135,7 +168,7 @@ function FAQ() {
             <button
               key={section}
               className={`btn ${selectedSection === section ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={() => { setSelectedSection(section); setSearch(''); }}
+              onClick={() => { setSearchParams({}); setSelectedSection(section); setSearch(''); }}
               style={{ padding: '0.5rem 1rem' }}
             >
               {section}
@@ -166,7 +199,14 @@ function FAQ() {
               {section}
             </h2>
             {sectionFaqs.map((faq) => (
-              <div key={faq._id} className="faq-item">
+              <div
+                key={faq._id}
+                className="faq-item"
+                style={faq._id === highlightedFaqId ? {
+                  borderLeft: '5px solid #4CAF50',
+                  background: '#f1fff4'
+                } : undefined}
+              >
                 <h3>{faq.question}</h3>
                 <p style={{ whiteSpace: 'pre-wrap' }}>{faq.answer}</p>
                 {isAdmin && (

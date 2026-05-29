@@ -34,6 +34,20 @@ router.get('/sections', async (req, res) => {
   }
 });
 
+// Get one FAQ by id
+router.get('/:id', async (req, res) => {
+  try {
+    const faq = await FAQ.findById(req.params.id);
+    if (!faq) {
+      return res.status(404).json({ message: 'FAQ not found' });
+    }
+
+    res.json(faq);
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching FAQ' });
+  }
+});
+
 // Create FAQ (authenticated)
 router.post('/', auth, async (req, res) => {
   const { question, answer, section } = req.body;

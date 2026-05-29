@@ -3,6 +3,31 @@ const mongoose = require('mongoose');
 const ReplySchema = new mongoose.Schema({
   text: { type: String, required: true, trim: true },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  upvotes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  downvotes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  upvoteCount: {
+    type: Number,
+    default: 0
+  },
+  downvoteCount: {
+    type: Number,
+    default: 0
+  },
+  isSolution: {
+    type: Boolean,
+    default: false
+  },
+  markedSolutionBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   createdAt: { type: Date, default: Date.now }
 });
 
@@ -21,13 +46,29 @@ const QuestionSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  downvotes: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  downvoteCount: {
+    type: Number,
+    default: 0
+  },
   similarity: {
+    type: Number,
+    default: 0
+  },
+  similarityPercent: {
     type: Number,
     default: 0
   },
   similarTo: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Question',
+    default: null
+  },
+  similarToType: {
+    type: String,
+    enum: ['faq', 'question', null],
     default: null
   },
   status: {

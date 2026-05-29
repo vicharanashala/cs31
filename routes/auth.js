@@ -51,7 +51,7 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({
       message: 'Signup successful!',
       token,
-      user: { id: newUser._id, name: newUser.name, email: newUser.email }
+      user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role }
     });
   } catch (err) {
     console.error('Signup Error:', err);
@@ -87,7 +87,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful!',
       token,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
     console.error('Login Error:', err);

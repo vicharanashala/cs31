@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import FAQ from './pages/FAQ';
+import Questions from './pages/Questions';
+import AdminDashboard from './pages/AdminDashboard';
 import Navbar from './components/Navbar';
 import './App.css';
 
@@ -12,6 +14,9 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'admin';
+
   return (
     <Router>
       <div className="app">
@@ -23,6 +28,16 @@ function App() {
             <Route path="/faqs" element={
               <PrivateRoute>
                 <FAQ />
+              </PrivateRoute>
+            } />
+            <Route path="/questions" element={
+              <PrivateRoute>
+                <Questions />
+              </PrivateRoute>
+            } />
+            <Route path="/admin" element={
+              <PrivateRoute>
+                {isAdmin ? <AdminDashboard /> : <Navigate to="/faqs" />}
               </PrivateRoute>
             } />
             <Route path="/" element={<Navigate to="/login" />} />

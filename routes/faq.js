@@ -6,25 +6,47 @@ const auth = require('../middleware/auth');
 // Get all FAQs (public)
 router.get('/', async (req, res) => {
   try {
-    const faqs = await FAQ.find().sort({ createdAt: -1 });
+    const { section, search } = req.query;
+    let query = {};
+    
+    if (section) {
+      query.section = section;
+    }
+    
+    if (search) {
+      query.$text = { $search: search };
+    }
+    
+    const faqs = await FAQ.find(query).sort({ section: 1, createdAt: -1 });
     res.json(faqs);
   } catch (err) {
     res.status(500).json({ message: 'Error fetching FAQs' });
   }
 });
 
+// Get distinct sections
+router.get('/sections', async (req, res) => {
+  try {
+    const sections = await FAQ.distinct('section');
+    res.json(sections.sort());
+  } catch (err) {
+    res.status(500).json({ message: 'Error fetching sections' });
+  }
+});
+
 // Create FAQ (authenticated)
 router.post('/', auth, async (req, res) => {
-  const { question, answer } = req.body;
+  const { question, answer, section } = req.body;
 
-  if (!question || !answer) {
-    return res.status(400).json({ message: 'Question and answer are required' });
+  if (!question || !answer || !section) {
+    return res.status(400).json({ message: 'Question, answer, and section are required' });
   }
 
   try {
     const newFAQ = new FAQ({
       question,
       answer,
+      section,
       createdBy: req.user.id
     });
 
@@ -38,7 +60,7 @@ router.post('/', auth, async (req, res) => {
 
 // Update FAQ (authenticated)
 router.put('/:id', auth, async (req, res) => {
-  const { question, answer } = req.body;
+  const { question, answer, section } = req.body;
 
   try {
     const faq = await FAQ.findById(req.params.id);
@@ -48,6 +70,7 @@ router.put('/:id', auth, async (req, res) => {
 
     if (question) faq.question = question;
     if (answer) faq.answer = answer;
+    if (section) faq.section = section;
     faq.updatedAt = Date.now();
 
     await faq.save();

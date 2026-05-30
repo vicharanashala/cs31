@@ -647,7 +647,7 @@ function Questions() {
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'upvote')}
                           style={{
-                            background: hasReplyUpvoted(reply) ? 'rgba(52,211,153,0.1)' : 'transparent',
+                            background: hasReplyUpvoted(reply) ? 'rgba(52,211,153,0.18)' : 'transparent',
                             border: `1px solid ${hasReplyUpvoted(reply) ? C.success : C.border}`,
                             color: hasReplyUpvoted(reply) ? C.success : C.muted,
                             borderRadius: '5px',
@@ -657,7 +657,8 @@ function Questions() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '3px',
-                            transition: 'all 0.15s'
+                            transition: 'all 0.15s',
+                            boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(52,211,153,0.25)' : 'none'
                           }}
                         >
                           ▲ {reply.upvoteCount || 0}
@@ -667,7 +668,7 @@ function Questions() {
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
                           style={{
-                            background: hasReplyDownvoted(reply) ? 'rgba(248,113,113,0.1)' : 'transparent',
+                            background: hasReplyDownvoted(reply) ? 'rgba(248,113,113,0.18)' : 'transparent',
                             border: `1px solid ${hasReplyDownvoted(reply) ? C.danger : C.border}`,
                             color: hasReplyDownvoted(reply) ? C.danger : C.muted,
                             borderRadius: '5px',
@@ -677,7 +678,8 @@ function Questions() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '3px',
-                            transition: 'all 0.15s'
+                            transition: 'all 0.15s',
+                            boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(248,113,113,0.25)' : 'none'
                           }}
                         >
                           ▼ {reply.downvoteCount || 0}
@@ -880,7 +882,7 @@ function VoteBtn({ active, onClick, label, activeColor }) {
     <button
       onClick={onClick}
       style={{
-        background: active ? `rgba(${activeBg},0.12)` : 'transparent',
+        background: active ? `rgba(${activeBg},0.18)` : 'transparent',
         border: `1px solid ${active ? activeColor : C.border}`,
         color: active ? activeColor : '#525166',
         borderRadius: '6px',
@@ -892,7 +894,8 @@ function VoteBtn({ active, onClick, label, activeColor }) {
         alignItems: 'center',
         justifyContent: 'center',
         transition: 'all 0.15s',
-        outline: 'none'
+        outline: 'none',
+        boxShadow: active ? `0 0 10px rgba(${activeBg},0.3)` : 'none'
       }}
       onMouseEnter={(e) => { if (!active) e.target.style.borderColor = activeColor; }}
       onMouseLeave={(e) => { if (!active) e.target.style.borderColor = C.border; }}

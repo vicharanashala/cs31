@@ -5,7 +5,8 @@ import Signup from './pages/Signup';
 import FAQ from './pages/FAQ';
 import Questions from './pages/Questions';
 import AdminDashboard from './pages/AdminDashboard';
-import Navbar from './components/Navbar';
+import AiSupport from './pages/AiSupport';
+import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
 function PrivateRoute({ children }) {
@@ -14,35 +15,47 @@ function PrivateRoute({ children }) {
 }
 
 function App() {
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const isAdmin = user.role === 'admin';
-
   return (
     <Router>
       <div className="app">
-        <Navbar />
-        <div className="container">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/faqs" element={
-              <PrivateRoute>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/faqs" element={
+            <PrivateRoute>
+              <DashboardLayout>
                 <FAQ />
-              </PrivateRoute>
-            } />
-            <Route path="/questions" element={
-              <PrivateRoute>
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/questions" element={
+            <PrivateRoute>
+              <DashboardLayout>
                 <Questions />
-              </PrivateRoute>
-            } />
-            <Route path="/admin" element={
-              <PrivateRoute>
-                {isAdmin ? <AdminDashboard /> : <Navigate to="/faqs" />}
-              </PrivateRoute>
-            } />
-            <Route path="/" element={<Navigate to="/login" />} />
-          </Routes>
-        </div>
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/ai-support" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <AiSupport />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/admin" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                {/* Dynamically check role from local storage storage updates */}
+                {JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' ? (
+                  <AdminDashboard />
+                ) : (
+                  <Navigate to="/faqs" />
+                )}
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/" element={<Navigate to="/login" />} />
+        </Routes>
       </div>
     </Router>
   );

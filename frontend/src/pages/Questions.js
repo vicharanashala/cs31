@@ -4,20 +4,20 @@ import { useNavigate } from 'react-router-dom';
 
 const DUPLICATE_LIMIT = 85;
 
-// --- Color tokens (AI Studio inspired dark theme) ---
+// --- Color tokens (AI Studio inspired dark theme matching FAQ page) ---
 const C = {
-  bg: '#0f0f1a',          // page background
-  surface: '#1a1a2e',     // card / panel background
-  surface2: '#23233a',    // elevated surface (hover, reply bg)
-  border: '#2e2e4a',      // borders / dividers
-  accent: '#7c6af5',      // primary accent (purple)
-  accent2: '#5b8dee',     // secondary accent (blue)
-  success: '#34d399',     // solution / approved
-  warning: '#fbbf24',     // pending / unsolved
-  danger: '#f87171',      // rejected / error
-  text: '#e2e8f0',        // primary text
-  muted: '#6b7280',       // secondary text / metadata
-  muted2: '#9ca3af',      // slightly brighter muted
+  bg: 'transparent',
+  surface: '#121026',      // card / panel background
+  surface2: '#191738',     // elevated surface (hover, reply bg)
+  border: '#1f1b3c',       // borders / dividers
+  accent: '#7c6af5',       // primary accent (purple)
+  accent2: '#6366f1',      // secondary accent (blue)
+  success: '#34d399',      // solution / approved
+  warning: '#fbbf24',      // pending / unsolved
+  danger: '#f87171',       // rejected / error
+  text: '#e2e8f0',         // primary text
+  muted: '#7a7990',        // secondary text / metadata
+  muted2: '#b4b3c8',       // slightly brighter muted
 };
 
 function Questions() {
@@ -81,11 +81,11 @@ function Questions() {
   }, [questions]);
 
   // --- Voting helpers ---
-  const hasUpvoted = (q) => q.upvotes?.includes(user.id);
-  const hasDownvoted = (q) => q.downvotes?.includes(user.id);
+  const hasUpvoted = (q) => q.upvotes?.some(u => u._id === user.id || u === user.id);
+  const hasDownvoted = (q) => q.downvotes?.some(u => u._id === user.id || u === user.id);
 
-  const hasReplyUpvoted = (reply) => reply.upvotes?.includes(user.id);
-  const hasReplyDownvoted = (reply) => reply.downvotes?.includes(user.id);
+  const hasReplyUpvoted = (reply) => reply.upvotes?.some(u => u._id === user.id || u === user.id);
+  const hasReplyDownvoted = (reply) => reply.downvotes?.some(u => u._id === user.id || u === user.id);
 
   const sortedReplies = (replies) => [...(replies || [])].sort((a, b) => {
     if (a.isSolution && !b.isSolution) return -1;
@@ -98,7 +98,7 @@ function Questions() {
   // --- Handlers ---
   const handleUpvote = async (id) => {
     try {
-      const res = await axios.post(`/api/questions/${id}/vote`, { type: 'upvote' }, config);
+      await axios.post(`/api/questions/${id}/upvote`, {}, config);
       refreshAll();
     } catch (err) {
       console.error('Upvote error:', err);
@@ -107,7 +107,7 @@ function Questions() {
 
   const handleDownvote = async (id) => {
     try {
-      const res = await axios.post(`/api/questions/${id}/vote`, { type: 'downvote' }, config);
+      await axios.post(`/api/questions/${id}/downvote`, {}, config);
       refreshAll();
     } catch (err) {
       console.error('Downvote error:', err);
@@ -116,7 +116,7 @@ function Questions() {
 
   const handleReplyVote = async (qId, replyId, type) => {
     try {
-      const res = await axios.post(`/api/questions/${qId}/replies/${replyId}/vote`, { type }, config);
+      await axios.post(`/api/questions/${qId}/replies/${replyId}/${type}`, {}, config);
       refreshAll();
     } catch (err) {
       console.error('Reply vote error:', err);
@@ -127,7 +127,7 @@ function Questions() {
     const text = replyTexts[qId];
     if (!text || !text.trim()) return;
     try {
-      await axios.post(`/api/questions/${qId}/replies`, { text: text.trim() }, config);
+      await axios.post(`/api/questions/${qId}/reply`, { text: text.trim() }, config);
       setReplyTexts({ ...replyTexts, [qId]: '' });
       setShowReply({ ...showReply, [qId]: false });
       refreshAll();
@@ -138,7 +138,7 @@ function Questions() {
 
   const handleMarkSolution = async (qId, replyId) => {
     try {
-      const res = await axios.post(`/api/questions/${qId}/mark-solution`, { replyId }, config);
+      await axios.post(`/api/questions/${qId}/replies/${replyId}/solution`, {}, config);
       refreshAll();
     } catch (err) {
       console.error('Mark solution error:', err);
@@ -168,7 +168,7 @@ function Questions() {
         setShowSimilar(true);
         setSimilarNotice(res.data.message);
         setPendingSimilarConfirmation(true);
-      } else if (res.data.hasMatch) {
+      } else {
         setNewQuestion('');
         setSimilarQuestions([]);
         setShowSimilar(false);
@@ -176,12 +176,7 @@ function Questions() {
         setPendingSimilarConfirmation(false);
         refreshAll();
         setMessage('Question posted successfully!');
-      } else {
-        setNewQuestion('');
-        setSimilarNotice('');
-        setPendingSimilarConfirmation(false);
-        refreshAll();
-        setMessage('Question posted successfully!');
+        setTimeout(() => setMessage(''), 3000);
       }
     } catch (err) {
       if (err.response?.status === 409 && err.response?.data?.duplicate) {
@@ -191,18 +186,20 @@ function Questions() {
         setPendingSimilarConfirmation(false);
       } else {
         setMessage(err.response?.data?.message || 'Error posting question');
+        setTimeout(() => setMessage(''), 3500);
       }
     }
   };
 
   const handleViewFAQ = async (faqId) => {
-    navigate(`/faq?id=${faqId}`);
+    navigate(`/faqs?faq=${faqId}`);
   };
 
   // --- Permission helpers ---
   const canMarkSolution = (q) => {
     if (!user.id) return false;
-    const isAuthor = q.createdBy?._id === user.id || q.createdBy === user.id;
+    const authorId = q.createdBy?._id || q.createdBy;
+    const isAuthor = authorId === user.id;
     return (user.role === 'admin' || isAuthor) && q.status === 'approved';
   };
 
@@ -211,23 +208,26 @@ function Questions() {
     return user.role === 'admin' && q.status === 'approved';
   };
 
-  // --- Render ---
   return (
-    <div style={{ background: C.bg, minHeight: '100vh', color: C.text, fontFamily: "'Segoe UI', 'Inter', sans-serif" }}>
+    <div style={{ background: C.bg, minHeight: '100%', color: C.text, display: 'flex', flexDirection: 'column', width: '100%' }}>
 
-      {/* Page header bar */}
+      {/* Header bar row */}
       <div style={{
-        borderBottom: `1px solid ${C.border}`,
-        padding: '1rem 2rem',
         display: 'flex',
         alignItems: 'center',
-        gap: '1rem'
+        justifyContent: 'space-between',
+        marginBottom: '2rem'
       }}>
-        <div style={{ width: '3px', height: '24px', background: `linear-gradient(to bottom, ${C.accent}, ${C.accent2})`, borderRadius: '2px' }} />
-        <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600, color: C.text, letterSpacing: '-0.01em' }}>
-          Student Questions
-        </h2>
-        <div style={{ display: 'flex', gap: '0.4rem', marginLeft: 'auto' }}>
+        <h1 style={{
+          fontSize: '1.5rem',
+          fontWeight: 700,
+          color: '#fff',
+          margin: 0,
+          letterSpacing: '-0.02em'
+        }}>
+          Post Questions
+        </h1>
+        <div style={{ display: 'flex', gap: '0.45rem' }}>
           <FilterPill active={activeTab === 'all'} onClick={() => setActiveTab('all')}>
             All <Badge>{questions.length}</Badge>
           </FilterPill>
@@ -240,29 +240,29 @@ function Questions() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '860px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto' }}>
 
-        {/* Post question */}
+        {/* Post Question Form Card */}
         <div style={{
           background: C.surface,
           border: `1px solid ${C.border}`,
-          borderRadius: '12px',
-          padding: '1.25rem',
-          marginBottom: '1.5rem'
+          borderRadius: '16px',
+          padding: '1.5rem',
+          marginBottom: '2rem'
         }}>
           <form onSubmit={handlePostQuestion}>
             <textarea
               value={newQuestion}
               onChange={(e) => setNewQuestion(e.target.value)}
-              placeholder="Ask a question..."
-              rows="2"
+              placeholder="Post a query... Make sure it is not covered in FAQs."
+              rows="3"
               style={{
                 width: '100%',
-                background: C.surface2,
+                background: '#0d0c1b',
                 border: `1px solid ${C.border}`,
-                borderRadius: '8px',
+                borderRadius: '10px',
                 color: C.text,
-                padding: '0.75rem',
+                padding: '0.85rem 1rem',
                 fontSize: '0.9rem',
                 resize: 'none',
                 fontFamily: 'inherit',
@@ -273,75 +273,103 @@ function Questions() {
               onFocus={(e) => e.target.style.borderColor = C.accent}
               onBlur={(e) => e.target.style.borderColor = C.border}
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.75rem' }}>
-              {message && (
-                <span style={{
-                  fontSize: '0.82rem',
-                  color: message.includes('success') || message.includes('successfully') ? C.success : C.danger,
-                  fontWeight: 500
-                }}>
-                  {message}
-                </span>
-              )}
-              <button
-                type="submit"
-                disabled={!newQuestion.trim()}
-                style={{
-                  marginLeft: 'auto',
-                  background: newQuestion.trim() ? C.accent : C.border,
-                  color: '#fff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '0.5rem 1.25rem',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: newQuestion.trim() ? 'pointer' : 'not-allowed',
-                  transition: 'all 0.2s'
-                }}
-              >
-              Post Question
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+              <div>
+                {message && (
+                  <span style={{
+                    fontSize: '0.85rem',
+                    color: message.includes('success') ? C.success : C.danger,
+                    fontWeight: 600
+                  }}>
+                    {message}
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                {pendingSimilarConfirmation && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPendingSimilarConfirmation(false);
+                      setNewQuestion('');
+                      setShowSimilar(false);
+                      setSimilarQuestions([]);
+                    }}
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      color: C.text,
+                      border: `1px solid ${C.border}`,
+                      borderRadius: '8px',
+                      padding: '0.5rem 1.25rem',
+                      fontSize: '0.82rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                )}
+                <button
+                  type="submit"
+                  disabled={!newQuestion.trim()}
+                  style={{
+                    background: newQuestion.trim() ? (pendingSimilarConfirmation ? C.warning : C.accent) : '#1e1b38',
+                    color: newQuestion.trim() ? '#fff' : '#525166',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1.25rem',
+                    fontSize: '0.82rem',
+                    fontWeight: 600,
+                    cursor: newQuestion.trim() ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {pendingSimilarConfirmation ? 'Post Anyway' : 'Post Question'}
+                </button>
+              </div>
             </div>
           </form>
 
           {/* Similar question warning */}
           {showSimilar && (
             <div style={{
-              marginTop: '1rem',
-              background: '#2a1a0a',
-              border: `1px solid #5a3a10`,
-              borderRadius: '8px',
-              padding: '1rem'
+              marginTop: '1.25rem',
+              background: 'rgba(251,191,36,0.06)',
+              border: `1px solid rgba(251,191,36,0.25)`,
+              borderRadius: '10px',
+              padding: '1.25rem'
             }}>
-              <p style={{ color: C.warning, fontSize: '0.85rem', marginBottom: '0.75rem', fontWeight: 600 }}>
-                {similarNotice}
+              <p style={{ color: C.warning, fontSize: '0.85rem', marginBottom: '1rem', marginTop: 0, fontWeight: 700 }}>
+                ⚠️ {similarNotice}
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {similarQuestions.map((sq) => (
                   <div key={sq.id} style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    borderRadius: '6px',
-                    padding: '0.65rem 0.85rem',
+                    background: 'rgba(7, 7, 14, 0.4)',
+                    borderRadius: '8px',
+                    padding: '0.85rem 1rem',
                     border: `1px solid ${C.border}`
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.35rem' }}>
                       <span style={{
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '1px 7px',
-                        borderRadius: '10px',
-                        background: sq.type === 'faq' ? 'rgba(59,130,246,0.2)' : 'rgba(52,211,153,0.2)',
-                        color: sq.type === 'faq' ? '#60a5fa' : C.success,
+                        fontSize: '0.65rem',
+                        fontWeight: 800,
+                        padding: '0.15rem 0.5rem',
+                        borderRadius: '5px',
+                        background: sq.type === 'faq' ? 'rgba(99,102,241,0.15)' : 'rgba(52,211,153,0.15)',
+                        color: sq.type === 'faq' ? C.accent2 : C.success,
                         textTransform: 'uppercase',
                         letterSpacing: '0.05em'
                       }}>
-                        {sq.type === 'faq' ? 'FAQ' : 'Q'}
+                        {sq.type === 'faq' ? 'FAQ' : 'Question'}
                       </span>
-                      <span style={{ fontSize: '0.8rem', color: C.muted2, fontWeight: 600 }}>
-                        {Math.round(sq.percent)}% match
+                      <span style={{ fontSize: '0.75rem', color: C.warning, fontWeight: 700 }}>
+                        {Math.round(sq.confidence || sq.similarity)}% match
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.88rem', color: C.muted2 }}>"{sq.question}"</p>
+                    <p style={{ margin: 0, fontSize: '0.88rem', color: C.text, fontStyle: 'italic' }}>
+                      "{sq.question}"
+                    </p>
                     {sq.type === 'faq' && (
                       <button
                         type="button"
@@ -352,19 +380,23 @@ function Questions() {
                           border: `1px solid ${C.accent2}`,
                           color: C.accent2,
                           borderRadius: '6px',
-                          padding: '0.3rem 0.75rem',
-                          fontSize: '0.75rem',
-                          cursor: 'pointer'
+                          padding: '0.25rem 0.65rem',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
                         }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(99,102,241,0.08)'}
+                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
                       >
-                        View FAQ →
+                        View FAQ Answer →
                       </button>
                     )}
                   </div>
                 ))}
               </div>
-              <p style={{ color: C.muted, fontSize: '0.75rem', marginTop: '0.75rem', marginBottom: 0 }}>
-                {DUPLICATE_LIMIT}%+ matches cannot be posted. Lower matches need one more click.
+              <p style={{ color: C.muted, fontSize: '0.72rem', marginTop: '1rem', marginBottom: 0 }}>
+                Questions with {DUPLICATE_LIMIT}% similarity or more cannot be posted. Lower matches require confirmation to proceed.
               </p>
             </div>
           )}
@@ -373,8 +405,11 @@ function Questions() {
         {/* Empty state */}
         {getDisplayedQuestions().length === 0 && (
           <div style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: '16px',
             textAlign: 'center',
-            padding: '3rem 1rem',
+            padding: '4rem 2rem',
             color: C.muted,
             fontSize: '0.9rem'
           }}>
@@ -383,157 +418,183 @@ function Questions() {
               : showUnsolvedOnly && activeTab === 'my'
                 ? 'You have no unsolved questions!'
                 : showUnsolvedOnly
-                  ? 'No unsolved questions — all answered!'
-                  : 'No questions yet. Be the first to ask!'
+                  ? 'No unsolved questions — all resolved!'
+                  : 'No questions in community feed. Start a discussion!'
             }
           </div>
         )}
 
-        {/* Question list */}
-        {getDisplayedQuestions().map((q) => (
-          <div key={q._id} style={{
-            background: C.surface,
-            border: `1px solid ${C.border}`,
-            borderRadius: '12px',
-            marginBottom: '1rem',
-            overflow: 'hidden'
-          }}>
-            {/* Question body */}
-            <div style={{ padding: '1.1rem 1.25rem', display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-              {/* Vote column */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', minWidth: '36px' }}>
-                <VoteBtn
-                  active={hasUpvoted(q)}
-                  onClick={() => handleUpvote(q._id)}
-                  label="▲"
-                  activeColor={C.success}
-                />
-                <span style={{
-                  fontSize: '0.82rem',
-                  fontWeight: 700,
-                  color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? C.success : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? C.danger : C.muted
-                }}>
-                  {(q.upvoteCount || 0) - (q.downvoteCount || 0)}
-                </span>
-                <VoteBtn
-                  active={hasDownvoted(q)}
-                  onClick={() => handleDownvote(q._id)}
-                  label="▼"
-                  activeColor={C.danger}
-                />
-              </div>
-
-              {/* Content */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Status badge (My Q tab) */}
-                {activeTab === 'my' && q.status && (
+        {/* Question Feed cards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {getDisplayedQuestions().map((q) => (
+            <div key={q._id} style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: '16px',
+              overflow: 'hidden'
+            }}>
+              {/* Question body card */}
+              <div style={{ padding: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
+                
+                {/* Voting Controls column */}
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: '36px' }}>
+                  <VoteBtn
+                    active={hasUpvoted(q)}
+                    onClick={() => handleUpvote(q._id)}
+                    label="▲"
+                    activeColor={C.success}
+                  />
                   <span style={{
-                    display: 'inline-block',
-                    fontSize: '0.68rem',
-                    padding: '2px 9px',
-                    borderRadius: '10px',
-                    marginBottom: '0.4rem',
+                    fontSize: '0.82rem',
                     fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.05em',
-                    background:
-                      q.status === 'pending' ? 'rgba(251,191,36,0.15)' :
-                      q.status === 'rejected' ? 'rgba(248,113,113,0.15)' :
-                      'rgba(52,211,153,0.15)',
-                    color:
-                      q.status === 'pending' ? C.warning :
-                      q.status === 'rejected' ? C.danger :
-                      C.success
+                    margin: '2px 0',
+                    color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? C.success : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? C.danger : C.muted
                   }}>
-                    {q.status}
+                    {(q.upvoteCount || 0) - (q.downvoteCount || 0)}
                   </span>
-                )}
+                  <VoteBtn
+                    active={hasDownvoted(q)}
+                    onClick={() => handleDownvote(q._id)}
+                    label="▼"
+                    activeColor={C.danger}
+                  />
+                </div>
 
-                <p style={{ fontSize: '0.95rem', fontWeight: 500, color: C.text, margin: '0 0 0.4rem 0', lineHeight: 1.5 }}>
-                  {q.question}
-                </p>
+                {/* Content Area */}
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  
+                  {/* Row showing status badge */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      {q.status && (
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '5px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          background:
+                            q.status === 'pending' ? 'rgba(251,191,36,0.1)' :
+                            q.status === 'rejected' ? 'rgba(248,113,113,0.1)' :
+                            'rgba(52,211,153,0.1)',
+                          color:
+                            q.status === 'pending' ? C.warning :
+                            q.status === 'rejected' ? C.danger :
+                            C.success
+                        }}>
+                          {q.status}
+                        </span>
+                      )}
+                      
+                      {getSimilarityPercent(q) >= 60 && (
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 700,
+                          padding: '0.2rem 0.5rem',
+                          borderRadius: '5px',
+                          background: getSimilarityPercent(q) >= 85 ? 'rgba(248,113,113,0.1)' : 'rgba(251,191,36,0.1)',
+                          color: getSimilarityPercent(q) >= 85 ? C.danger : C.warning
+                        }}>
+                          {getSimilarityPercent(q)}% Match
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.75rem', color: C.muted }}>
-                    {q.createdBy?.name || 'Unknown'}
-                  </span>
-                  <span style={{ color: C.border }}>·</span>
-                  <span style={{ fontSize: '0.75rem', color: C.muted }}>
-                    {new Date(q.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </span>
-                  <span style={{ color: C.border }}>·</span>
-                  <span style={{ fontSize: '0.75rem', color: C.muted }}>
-                    {q.replies?.length || 0} {q.replies?.length === 1 ? 'reply' : 'replies'}
-                  </span>
+                  <p style={{
+                    fontSize: '1rem',
+                    fontWeight: 600,
+                    color: C.text,
+                    margin: '0 0 0.75rem 0',
+                    lineHeight: 1.5
+                  }}>
+                    {q.question}
+                  </p>
 
-                  {getSimilarityPercent(q) >= 60 && (
-                    <>
-                      <span style={{ color: C.border }}>·</span>
-                      <span style={{
-                        fontSize: '0.7rem',
-                        padding: '1px 8px',
-                        borderRadius: '10px',
-                        fontWeight: 600,
-                        background: getSimilarityPercent(q) >= 85 ? 'rgba(248,113,113,0.15)' : 'rgba(251,191,36,0.15)',
-                        color: getSimilarityPercent(q) >= 85 ? C.danger : C.warning
-                      }}>
-                        {getSimilarityPercent(q)}% similar to {q.similarToType === 'question' ? 'Q' : 'FAQ'}
-                      </span>
-                    </>
-                  )}
+                  {/* Metadata line */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.75rem', color: C.muted }}>
+                    <span style={{ fontWeight: 600, color: '#9f9eaf' }}>
+                      {q.createdBy?.name || 'Unknown'}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {new Date(q.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </span>
+                    <span>•</span>
+                    <span style={{ color: C.accent }}>
+                      {q.replies?.length || 0} {q.replies?.length === 1 ? 'reply' : 'replies'}
+                    </span>
+                  </div>
+
                 </div>
               </div>
-            </div>
 
-            {/* Replies section */}
-            {q.replies && q.replies.length > 0 && (
-              <div style={{
-                borderTop: `1px solid ${C.border}`,
-                background: 'rgba(0,0,0,0.15)',
-                padding: '0.75rem 1.25rem 0.75rem calc(1.25rem + 36px + 1rem)'
-              }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {/* Nested Replies */}
+              {q.replies && q.replies.length > 0 && (
+                <div style={{
+                  borderTop: `1px solid ${C.border}`,
+                  background: 'rgba(7, 6, 14, 0.4)',
+                  padding: '1.25rem 1.5rem 1.25rem calc(1.5rem + 36px + 1.25rem)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem'
+                }}>
                   {sortedReplies(q.replies).map((reply) => (
                     <div key={reply._id} style={{
-                      background: reply.isSolution ? 'rgba(52,211,153,0.08)' : C.surface2,
-                      border: `1px solid ${reply.isSolution ? 'rgba(52,211,153,0.3)' : C.border}`,
-                      borderRadius: '8px',
-                      padding: '0.7rem 0.9rem'
+                      background: reply.isSolution ? 'rgba(52,211,153,0.04)' : C.surface2,
+                      border: `1px solid ${reply.isSolution ? 'rgba(52,211,153,0.25)' : C.border}`,
+                      borderRadius: '10px',
+                      padding: '0.85rem 1.1rem',
+                      boxSizing: 'border-box'
                     }}>
+                      {/* Solution Banner */}
                       {reply.isSolution && (
                         <div style={{
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
                           color: C.success,
                           textTransform: 'uppercase',
                           letterSpacing: '0.08em',
-                          marginBottom: '0.3rem',
+                          marginBottom: '0.4rem',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '0.35rem'
                         }}>
-                          <span style={{ fontSize: '0.8rem' }}>✓</span> Solution
+                          ✓ Verified Solution
                           {reply.markedSolutionBy && (
-                            <span style={{ color: C.muted, fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                              — marked by {reply.markedSolutionBy?.name || 'Unknown'}
-                              {reply.markedSolutionBy?.role === 'admin' ? ' (Admin)' : ''}
+                            <span style={{ color: C.muted, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
+                              • marked by {reply.markedSolutionBy?.name || 'Unknown'} {reply.markedSolutionBy?.role === 'admin' ? '(Admin)' : ''}
                             </span>
                           )}
                         </div>
                       )}
-                      <p style={{ fontSize: '0.85rem', color: C.text, margin: 0, lineHeight: 1.5 }}>{reply.text}</p>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '0.72rem', color: C.muted }}>by {reply.createdBy?.name || 'Unknown'}</span>
-                        <span style={{ color: C.border }}>·</span>
+                      
+                      <p style={{
+                        fontSize: '0.85rem',
+                        color: C.text,
+                        margin: 0,
+                        lineHeight: 1.5,
+                        whiteSpace: 'pre-wrap'
+                      }}>
+                        {reply.text}
+                      </p>
+
+                      {/* Reply Metadata & Votes */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: C.muted }}>
+                        <span style={{ fontWeight: 600, color: '#9f9eaf' }}>by {reply.createdBy?.name || 'Unknown'}</span>
+                        <span>•</span>
+                        
+                        {/* Reply Upvote */}
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'upvote')}
                           style={{
-                            background: 'transparent',
+                            background: hasReplyUpvoted(reply) ? 'rgba(52,211,153,0.1)' : 'transparent',
                             border: `1px solid ${hasReplyUpvoted(reply) ? C.success : C.border}`,
                             color: hasReplyUpvoted(reply) ? C.success : C.muted,
                             borderRadius: '5px',
-                            padding: '1px 7px',
-                            fontSize: '0.72rem',
+                            padding: '2px 8px',
+                            fontSize: '0.7rem',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -543,15 +604,17 @@ function Questions() {
                         >
                           ▲ {reply.upvoteCount || 0}
                         </button>
+                        
+                        {/* Reply Downvote */}
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
                           style={{
-                            background: 'transparent',
+                            background: hasReplyDownvoted(reply) ? 'rgba(248,113,113,0.1)' : 'transparent',
                             border: `1px solid ${hasReplyDownvoted(reply) ? C.danger : C.border}`,
                             color: hasReplyDownvoted(reply) ? C.danger : C.muted,
                             borderRadius: '5px',
-                            padding: '1px 7px',
-                            fontSize: '0.72rem',
+                            padding: '2px 8px',
+                            fontSize: '0.7rem',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -561,6 +624,8 @@ function Questions() {
                         >
                           ▼ {reply.downvoteCount || 0}
                         </button>
+
+                        {/* Mark Solution Action */}
                         {canMarkSolution(q) && !reply.isSolution && (
                           <button
                             onClick={() => handleMarkSolution(q._id, reply._id)}
@@ -570,29 +635,36 @@ function Questions() {
                               border: `1px solid ${C.accent}`,
                               color: C.accent,
                               borderRadius: '5px',
-                              padding: '1px 8px',
-                              fontSize: '0.72rem',
+                              padding: '2px 8px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.15s'
                             }}
+                            onMouseEnter={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.15)'; }}
+                            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
                           >
                             Mark Solution
                           </button>
                         )}
+                        
                         {canUnmarkSolution(q) && reply.isSolution && (
                           <button
-                            onClick={() => handleMarkSolution(q._id, reply._id)}
+                            onClick={() => handleMarkSolution(q._id, reply._id)} // Toggle route behaves like unmark when called on active solution
                             style={{
                               marginLeft: 'auto',
                               background: 'transparent',
                               border: `1px solid ${C.danger}`,
                               color: C.danger,
                               borderRadius: '5px',
-                              padding: '1px 8px',
-                              fontSize: '0.72rem',
+                              padding: '2px 8px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
                               cursor: 'pointer',
                               transition: 'all 0.15s'
                             }}
+                            onMouseEnter={(e) => { e.target.style.background = 'rgba(248, 113, 113, 0.15)'; }}
+                            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
                           >
                             Unmark Solution
                           </button>
@@ -601,103 +673,107 @@ function Questions() {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Reply toggle */}
-            <div style={{
-              borderTop: `1px solid ${C.border}`,
-              padding: '0.6rem 1.25rem',
-              display: 'flex',
-              gap: '0.5rem'
-            }}>
-              {showReply[q._id] ? (
-                <>
-                  <input
-                    type="text"
-                    value={replyTexts[q._id] || ''}
-                    onChange={(e) => setReplyTexts({ ...replyTexts, [q._id]: e.target.value })}
-                    placeholder="Write a reply..."
-                    style={{
-                      flex: 1,
-                      background: C.surface2,
-                      border: `1px solid ${C.border}`,
-                      borderRadius: '8px',
-                      color: C.text,
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.85rem',
-                      outline: 'none',
-                      fontFamily: 'inherit'
-                    }}
-                    onFocus={(e) => e.target.style.borderColor = C.accent}
-                    onBlur={(e) => e.target.style.borderColor = C.border}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleReply(q._id); }}
-                  />
+              {/* Add Reply field */}
+              <div style={{
+                borderTop: `1px solid ${C.border}`,
+                padding: '0.85rem 1.5rem',
+                display: 'flex',
+                gap: '0.75rem',
+                background: 'rgba(7, 6, 14, 0.2)'
+              }}>
+                {showReply[q._id] ? (
+                  <>
+                    <input
+                      type="text"
+                      value={replyTexts[q._id] || ''}
+                      onChange={(e) => setReplyTexts({ ...replyTexts, [q._id]: e.target.value })}
+                      placeholder="Type your reply to this question..."
+                      style={{
+                        flex: 1,
+                        background: '#0d0c1b',
+                        border: `1px solid ${C.border}`,
+                        borderRadius: '8px',
+                        color: C.text,
+                        padding: '0.5rem 0.85rem',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        fontFamily: 'inherit'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = C.accent}
+                      onBlur={(e) => e.target.style.borderColor = C.border}
+                      onKeyDown={(e) => { if (e.key === 'Enter') handleReply(q._id); }}
+                    />
+                    <button
+                      onClick={() => handleReply(q._id)}
+                      disabled={!(replyTexts[q._id] || '').trim()}
+                      style={{
+                        background: (replyTexts[q._id] || '').trim() ? C.accent : '#1e1b38',
+                        color: (replyTexts[q._id] || '').trim() ? '#fff' : '#525166',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '0.5rem 1rem',
+                        fontSize: '0.82rem',
+                        fontWeight: 600,
+                        cursor: (replyTexts[q._id] || '').trim() ? 'pointer' : 'not-allowed'
+                      }}
+                    >
+                      Reply
+                    </button>
+                    <button
+                      onClick={() => setShowReply({ ...showReply, [q._id]: false })}
+                      style={{
+                        background: 'transparent',
+                        color: C.muted,
+                        border: `1px solid ${C.border}`,
+                        borderRadius: '8px',
+                        padding: '0.5rem 0.85rem',
+                        fontSize: '0.82rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                ) : (
                   <button
-                    onClick={() => handleReply(q._id)}
-                    style={{
-                      background: C.accent,
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '0.5rem 1rem',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Reply
-                  </button>
-                  <button
-                    onClick={() => setShowReply({ ...showReply, [q._id]: false })}
+                    onClick={() => setShowReply({ ...showReply, [q._id]: true })}
                     style={{
                       background: 'transparent',
                       color: C.muted,
                       border: `1px solid ${C.border}`,
                       borderRadius: '8px',
-                      padding: '0.5rem 0.75rem',
-                      fontSize: '0.82rem',
-                      cursor: 'pointer'
+                      padding: '0.45rem 1.1rem',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.15s'
                     }}
+                    onMouseEnter={(e) => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; }}
+                    onMouseLeave={(e) => { e.target.style.borderColor = C.border; e.target.style.color = C.muted; }}
                   >
-                    Cancel
+                    + Add reply
                   </button>
-                </>
-              ) : (
-                <button
-                  onClick={() => setShowReply({ ...showReply, [q._id]: true })}
-                  style={{
-                    background: 'transparent',
-                    color: C.muted,
-                    border: `1px solid ${C.border}`,
-                    borderRadius: '8px',
-                    padding: '0.4rem 1rem',
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s'
-                  }}
-                  onMouseEnter={(e) => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; }}
-                  onMouseLeave={(e) => { e.target.style.borderColor = C.border; e.target.style.color = C.muted; }}
-                >
-                  + Add reply
-                </button>
-              )}
+                )}
+              </div>
+
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
+
       </div>
     </div>
   );
 }
 
-// --- Sub-components ---
+// --- Sub-components for styling consistency ---
 
 function FilterPill({ active, onClick, children, accent }) {
-  const C2 = {
-    bg: '#1a1a2e',
-    border: '#2e2e4a',
-    accent: accent || '#7c6af5',
-  };
+  const borderCol = active ? (accent || C.accent) : C.border;
+  const bgCol = active ? `rgba(124, 106, 245, 0.15)` : '#0d0c1b';
+  const textCol = active ? (accent || '#a78bfa') : '#8f8eaf';
+
   return (
     <button
       onClick={onClick}
@@ -705,16 +781,17 @@ function FilterPill({ active, onClick, children, accent }) {
         display: 'flex',
         alignItems: 'center',
         gap: '0.35rem',
-        padding: '0.3rem 0.8rem',
+        padding: '0.45rem 1rem',
         borderRadius: '20px',
-        border: `1px solid ${active ? C2.accent : C2.border}`,
-        background: active ? `rgba(124,106,245,0.15)` : C2.bg,
-        color: active ? C2.accent : '#9ca3af',
-        fontSize: '0.78rem',
-        fontWeight: active ? 600 : 400,
+        border: `1px solid ${borderCol}`,
+        background: bgCol,
+        color: textCol,
+        fontSize: '0.8rem',
+        fontWeight: active ? 600 : 500,
         cursor: 'pointer',
-        transition: 'all 0.15s',
-        whiteSpace: 'nowrap'
+        transition: 'all 0.2s',
+        whiteSpace: 'nowrap',
+        outline: 'none'
       }}
     >
       {children}
@@ -726,12 +803,12 @@ function Badge({ children }) {
   return (
     <span style={{
       background: 'rgba(255,255,255,0.08)',
-      color: '#9ca3af',
+      color: '#8f8eaf',
       borderRadius: '10px',
       padding: '0 6px',
       fontSize: '0.7rem',
-      fontWeight: 600,
-      minWidth: '20px',
+      fontWeight: 700,
+      minWidth: '18px',
       textAlign: 'center'
     }}>
       {children}
@@ -740,23 +817,27 @@ function Badge({ children }) {
 }
 
 function VoteBtn({ active, onClick, label, activeColor }) {
+  const activeBg = activeColor === '#34d399' ? '52,211,153' : '248,113,113';
   return (
     <button
       onClick={onClick}
       style={{
-        background: active ? `rgba(${activeColor === '#34d399' ? '52,211,153' : '248,113,113'},0.15)` : 'transparent',
-        border: `1px solid ${active ? activeColor : '#2e2e4a'}`,
-        color: active ? activeColor : '#6b7280',
+        background: active ? `rgba(${activeBg},0.12)` : 'transparent',
+        border: `1px solid ${active ? activeColor : C.border}`,
+        color: active ? activeColor : '#525166',
         borderRadius: '6px',
-        width: '36px',
+        width: '34px',
         height: '28px',
         cursor: 'pointer',
-        fontSize: '0.85rem',
+        fontSize: '0.8rem',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        transition: 'all 0.15s'
+        transition: 'all 0.15s',
+        outline: 'none'
       }}
+      onMouseEnter={(e) => { if (!active) e.target.style.borderColor = activeColor; }}
+      onMouseLeave={(e) => { if (!active) e.target.style.borderColor = C.border; }}
     >
       {label}
     </button>

@@ -99,11 +99,37 @@ function Questions() {
   }, [questions]);
 
   // --- Voting helpers ---
-  const hasUpvoted = (q) => q.upvotes?.some(u => u._id === user.id || u === user.id);
-  const hasDownvoted = (q) => q.downvotes?.some(u => u._id === user.id || u === user.id);
+  const hasUpvoted = (q) => {
+    if (!q || !q.upvotes || !user.id) return false;
+    return q.upvotes.some(u => {
+      const uId = u._id ? u._id.toString() : u.toString();
+      return uId === user.id;
+    });
+  };
 
-  const hasReplyUpvoted = (reply) => reply.upvotes?.some(u => u._id === user.id || u === user.id);
-  const hasReplyDownvoted = (reply) => reply.downvotes?.some(u => u._id === user.id || u === user.id);
+  const hasDownvoted = (q) => {
+    if (!q || !q.downvotes || !user.id) return false;
+    return q.downvotes.some(u => {
+      const uId = u._id ? u._id.toString() : u.toString();
+      return uId === user.id;
+    });
+  };
+
+  const hasReplyUpvoted = (reply) => {
+    if (!reply || !reply.upvotes || !user.id) return false;
+    return reply.upvotes.some(u => {
+      const uId = u._id ? u._id.toString() : u.toString();
+      return uId === user.id;
+    });
+  };
+
+  const hasReplyDownvoted = (reply) => {
+    if (!reply || !reply.downvotes || !user.id) return false;
+    return reply.downvotes.some(u => {
+      const uId = u._id ? u._id.toString() : u.toString();
+      return uId === user.id;
+    });
+  };
 
   const sortedReplies = (replies) => [...(replies || [])].sort((a, b) => {
     if (a.isSolution && !b.isSolution) return -1;
@@ -464,13 +490,13 @@ function Questions() {
                     active={hasUpvoted(q)}
                     onClick={() => handleUpvote(q._id)}
                     label="▲"
-                    activeColor={C.success}
+                    activeColor="#22c55e"
                   />
                   <span style={{
                     fontSize: '0.82rem',
                     fontWeight: 700,
                     margin: '2px 0',
-                    color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? C.success : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? C.danger : C.muted
+                    color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? "#22c55e" : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? "#ef4444" : C.muted
                   }}>
                     {(q.upvoteCount || 0) - (q.downvoteCount || 0)}
                   </span>
@@ -478,7 +504,7 @@ function Questions() {
                     active={hasDownvoted(q)}
                     onClick={() => handleDownvote(q._id)}
                     label="▼"
-                    activeColor={C.danger}
+                    activeColor="#ef4444"
                   />
                 </div>
 
@@ -647,9 +673,9 @@ function Questions() {
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'upvote')}
                           style={{
-                            background: hasReplyUpvoted(reply) ? 'rgba(52,211,153,0.18)' : 'transparent',
-                            border: `1px solid ${hasReplyUpvoted(reply) ? C.success : C.border}`,
-                            color: hasReplyUpvoted(reply) ? C.success : C.muted,
+                            background: hasReplyUpvoted(reply) ? 'rgba(34,197,94,0.15)' : 'transparent',
+                            border: `1px solid ${hasReplyUpvoted(reply) ? '#22c55e' : C.border}`,
+                            color: hasReplyUpvoted(reply) ? '#22c55e' : C.muted,
                             borderRadius: '5px',
                             padding: '2px 8px',
                             fontSize: '0.7rem',
@@ -658,7 +684,7 @@ function Questions() {
                             alignItems: 'center',
                             gap: '3px',
                             transition: 'all 0.15s',
-                            boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(52,211,153,0.25)' : 'none'
+                            boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(34,197,94,0.2)' : 'none'
                           }}
                         >
                           ▲ {reply.upvoteCount || 0}
@@ -668,9 +694,9 @@ function Questions() {
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
                           style={{
-                            background: hasReplyDownvoted(reply) ? 'rgba(248,113,113,0.18)' : 'transparent',
-                            border: `1px solid ${hasReplyDownvoted(reply) ? C.danger : C.border}`,
-                            color: hasReplyDownvoted(reply) ? C.danger : C.muted,
+                            background: hasReplyDownvoted(reply) ? 'rgba(239,68,68,0.15)' : 'transparent',
+                            border: `1px solid ${hasReplyDownvoted(reply) ? '#ef4444' : C.border}`,
+                            color: hasReplyDownvoted(reply) ? '#ef4444' : C.muted,
                             borderRadius: '5px',
                             padding: '2px 8px',
                             fontSize: '0.7rem',
@@ -679,7 +705,7 @@ function Questions() {
                             alignItems: 'center',
                             gap: '3px',
                             transition: 'all 0.15s',
-                            boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(248,113,113,0.25)' : 'none'
+                            boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(239,68,68,0.2)' : 'none'
                           }}
                         >
                           ▼ {reply.downvoteCount || 0}
@@ -877,12 +903,12 @@ function Badge({ children }) {
 }
 
 function VoteBtn({ active, onClick, label, activeColor }) {
-  const activeBg = activeColor === '#34d399' ? '52,211,153' : '248,113,113';
+  const activeBg = activeColor === '#22c55e' ? '34,197,94' : '239,68,68';
   return (
     <button
       onClick={onClick}
       style={{
-        background: active ? `rgba(${activeBg},0.18)` : 'transparent',
+        background: active ? `rgba(${activeBg},0.15)` : 'transparent',
         border: `1px solid ${active ? activeColor : C.border}`,
         color: active ? activeColor : '#525166',
         borderRadius: '6px',
@@ -895,7 +921,7 @@ function VoteBtn({ active, onClick, label, activeColor }) {
         justifyContent: 'center',
         transition: 'all 0.15s',
         outline: 'none',
-        boxShadow: active ? `0 0 10px rgba(${activeBg},0.3)` : 'none'
+        boxShadow: active ? `0 0 10px rgba(${activeBg},0.25)` : 'none'
       }}
       onMouseEnter={(e) => { if (!active) e.target.style.borderColor = activeColor; }}
       onMouseLeave={(e) => { if (!active) e.target.style.borderColor = C.border; }}

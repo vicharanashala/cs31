@@ -194,7 +194,6 @@ function FAQ() {
           >
             💬 Open Mini Yaksha
           </button>
-          <span style={{ fontSize: '1.25rem', color: '#7a7990', cursor: 'pointer' }} title="FAQ Documentation">📖</span>
         </div>
       </div>
 

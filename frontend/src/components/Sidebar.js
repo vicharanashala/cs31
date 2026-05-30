@@ -85,6 +85,11 @@ function Sidebar() {
     {
       name: 'Post Questions',
       path: '/questions',
+      icon: '❓'
+    },
+    {
+      name: 'Leaderboards',
+      path: '/leaderboard',
       icon: '🏆'
     },
     {
@@ -162,7 +167,7 @@ function Sidebar() {
       justifyContent: 'space-between'
     }}>
       {/* Top Section */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', overflowY: 'auto', flex: 1, paddingRight: '0.25rem', marginBottom: '1rem' }}>
         
         {/* Profile Card */}
         <div style={{
@@ -333,6 +338,8 @@ function Sidebar() {
             })}
           </div>
         </div>
+
+
 
       </div>
 

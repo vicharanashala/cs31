@@ -64,7 +64,7 @@ function findAllSimilarQuestions(questionText, excludeId = null) {
   return new Promise(async (resolve) => {
     try {
       const faqs = await FAQ.find();
-      const query = excludeId ? { _id: { $ne: excludeId } } : {};
+      const query = excludeId ? { _id: { $ne: excludeId }, promotedToFAQ: { $ne: 'approved' } } : { promotedToFAQ: { $ne: 'approved' } };
       const questions = await Question.find(query);
       
       const allSimilar = [];
@@ -105,7 +105,7 @@ function findSimilarQuestion(questionText, excludeId = null) {
 
 router.get('/', async (req, res) => {
   try {
-    const questions = await Question.find()
+    const questions = await Question.find({ promotedToFAQ: { $ne: 'approved' } })
       .populate('createdBy', 'name email role spurtiPoints')
       .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
@@ -123,7 +123,7 @@ router.get('/', async (req, res) => {
 // Get current user's own questions
 router.get('/my', auth, async (req, res) => {
   try {
-    const questions = await Question.find({ createdBy: req.user.id })
+    const questions = await Question.find({ createdBy: req.user.id, promotedToFAQ: { $ne: 'approved' } })
       .populate('createdBy', 'name email role spurtiPoints')
       .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
@@ -527,9 +527,11 @@ router.post('/:id/approve', auth, async (req, res) => {
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
+
+    const finalQuestionText = req.body.question || question.question;
     
     const faq = new FAQ({
-      question: question.question,
+      question: finalQuestionText,
       answer: req.body.answer || 'Answer to be added',
       section: req.body.section || 'Community Contribution',
       createdBy: req.user.id
@@ -538,6 +540,7 @@ router.post('/:id/approve', auth, async (req, res) => {
     await faq.save();
     
     const wasAlreadyApproved = question.promotedToFAQ === 'approved';
+    question.question = finalQuestionText;
     question.status = 'approved';
     question.promotedToFAQ = 'approved';
     await question.save();

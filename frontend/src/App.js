@@ -7,6 +7,7 @@ import Questions from './pages/Questions';
 import AdminDashboard from './pages/AdminDashboard';
 import AiSupport from './pages/AiSupport';
 import Notifications from './pages/Notifications';
+import Leaderboards from './pages/Leaderboards';
 import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
@@ -47,6 +48,13 @@ function App() {
             <PrivateRoute>
               <DashboardLayout>
                 <Notifications />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/leaderboard" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Leaderboards />
               </DashboardLayout>
             </PrivateRoute>
           } />

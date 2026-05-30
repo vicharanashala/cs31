@@ -287,7 +287,14 @@ function Questions() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto' }}>
+      <div style={{
+        maxWidth: '800px',
+        width: '100%',
+        margin: '0 auto',
+        boxSizing: 'border-box',
+        padding: '0 1rem'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
 
         {/* Post Question Form Card */}
         <div style={{
@@ -846,6 +853,7 @@ function Questions() {
 
             </div>
           ))}
+        </div>
         </div>
 
       </div>

@@ -20,6 +20,10 @@ const AdminSchema = new mongoose.Schema({
   role: {
     type: String,
     default: 'admin'
+  },
+  spurtiPoints: {
+    type: Number,
+    default: 10
   }
 }, {
   timestamps: true

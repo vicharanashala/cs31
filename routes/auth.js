@@ -86,7 +86,7 @@ router.post('/login', async (req, res) => {
       return res.json({
         message: 'Login successful!',
         token,
-        user: { id: admin._id, name: admin.name, email: admin.email, role: 'admin' }
+        user: { id: admin._id, name: admin.name, email: admin.email, role: 'admin', spurtiPoints: admin.spurtiPoints || 10 }
       });
     }
 
@@ -145,6 +145,37 @@ router.get('/me', auth, async (req, res) => {
   } catch (err) {
     console.error('Get Me Error:', err);
     res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get students leaderboard (based on Spurti Points)
+router.get('/leaderboard/students', auth, async (req, res) => {
+  try {
+    const students = await User.find({ role: 'student' })
+      .select('name email role spurtiPoints')
+      .sort({ spurtiPoints: -1 });
+    res.json(students);
+  } catch (err) {
+    console.error('Students Leaderboard Error:', err);
+    res.status(500).json({ message: 'Server error fetching students leaderboard' });
+  }
+});
+
+// Get admins leaderboard (based on Spurti Points)
+router.get('/leaderboard/admins', auth, async (req, res) => {
+  try {
+    // Only admins should see the admin leaderboard
+    const isAdminUser = req.user.role === 'admin' || (await Admin.findById(req.user.id)) !== null;
+    if (!isAdminUser) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    const admins = await Admin.find()
+      .select('name email role spurtiPoints')
+      .sort({ spurtiPoints: -1 });
+    res.json(admins);
+  } catch (err) {
+    console.error('Admins Leaderboard Error:', err);
+    res.status(500).json({ message: 'Server error fetching admins leaderboard' });
   }
 });
 

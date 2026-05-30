@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Leaderboard from '../components/Leaderboard';
 
 const C = {
   bg: 'transparent',
@@ -27,6 +28,10 @@ function AdminDashboard() {
   const [section, setSection] = useState({});
   const [customSection, setCustomSection] = useState({});
   const [showFaqDraft, setShowFaqDraft] = useState({});
+  const [editedQuestion, setEditedQuestion] = useState({});
+  
+  const [studentsLeaderboard, setStudentsLeaderboard] = useState([]);
+  const [adminsLeaderboard, setAdminsLeaderboard] = useState([]);
   
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('faqRequests');
@@ -80,12 +85,28 @@ function AdminDashboard() {
     }
   };
 
+  const fetchLeaderboards = async () => {
+    try {
+      const studRes = await axios.get('/api/auth/leaderboard/students', config);
+      setStudentsLeaderboard(studRes.data);
+    } catch (err) {
+      console.error('Error fetching students leaderboard:', err);
+    }
+    try {
+      const admRes = await axios.get('/api/auth/leaderboard/admins', config);
+      setAdminsLeaderboard(admRes.data);
+    } catch (err) {
+      console.error('Error fetching admins leaderboard:', err);
+    }
+  };
+
   const refreshAll = () => {
     fetchFAQRequests();
     fetchPendingQuestions();
     fetchFAQs();
     fetchSections();
     fetchAllQuestions();
+    fetchLeaderboards();
   };
 
   useEffect(() => {
@@ -101,9 +122,20 @@ function AdminDashboard() {
     }
 
     const sec = customSection[questionId] || section[questionId] || 'Community Contribution';
+    
+    // Fallback to original question text from faqRequests or pendingQuestions if not edited
+    const qObj = faqRequests.find(q => q._id === questionId) || pendingQuestions.find(q => q._id === questionId);
+    const originalText = qObj ? qObj.question : '';
+    const qText = editedQuestion[questionId] !== undefined ? editedQuestion[questionId] : originalText;
+
+    if (!qText || qText.trim().length === 0) {
+      setMessage('Question text cannot be empty');
+      setTimeout(() => setMessage(''), 3000);
+      return;
+    }
 
     try {
-      await axios.post(`/api/questions/${questionId}/approve`, { answer: ans, section: sec }, config);
+      await axios.post(`/api/questions/${questionId}/approve`, { answer: ans, section: sec, question: qText.trim() }, config);
       setMessage('Question approved and added to FAQ directory successfully!');
       refreshAll();
       
@@ -111,6 +143,7 @@ function AdminDashboard() {
       setAnswer(prev => ({ ...prev, [questionId]: '' }));
       setSection(prev => ({ ...prev, [questionId]: '' }));
       setCustomSection(prev => ({ ...prev, [questionId]: '' }));
+      setEditedQuestion(prev => ({ ...prev, [questionId]: '' }));
       setShowFaqDraft(prev => ({ ...prev, [questionId]: false }));
       
       setTimeout(() => setMessage(''), 4000);
@@ -592,7 +625,18 @@ function AdminDashboard() {
         </div>
       )}
 
-      <div style={{ maxWidth: '860px', width: '100%', margin: '0 auto' }}>
+      <div style={{
+        maxWidth: '1200px',
+        width: '100%',
+        margin: '0 auto',
+        display: 'grid',
+        gridTemplateColumns: '1fr 340px',
+        gap: '2rem',
+        alignItems: 'start',
+        boxSizing: 'border-box',
+        padding: '0 1rem'
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
         
         {/* TAB 1: FAQ requests (>20 upvotes) */}
         {activeTab === 'faqRequests' && (
@@ -645,9 +689,10 @@ function AdminDashboard() {
                   {/* Collapsed view toggle button */}
                   {!showFaqDraft[q._id] ? (
                     <div style={{ display: 'flex', gap: '0.6rem' }}>
-                      <button
+                       <button
                         onClick={() => {
                           setShowFaqDraft(prev => ({ ...prev, [q._id]: true }));
+                          setEditedQuestion(prev => ({ ...prev, [q._id]: q.question }));
                           prefillFromSolution(q);
                         }}
                         style={{
@@ -696,6 +741,30 @@ function AdminDashboard() {
                       gap: '1rem'
                     }}>
                       <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+                        
+                        {/* Editable Question Input */}
+                        <div>
+                          <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: C.muted2, marginBottom: '0.35rem', textTransform: 'uppercase' }}>
+                            Edit Question Text
+                          </label>
+                          <input
+                            type="text"
+                            value={editedQuestion[q._id] !== undefined ? editedQuestion[q._id] : q.question}
+                            onChange={(e) => setEditedQuestion(prev => ({ ...prev, [q._id]: e.target.value }))}
+                            style={{
+                              width: '100%',
+                              background: '#0d0c1b',
+                              border: `1px solid ${C.border}`,
+                              borderRadius: '8px',
+                              color: C.text,
+                              padding: '0.65rem 0.85rem',
+                              fontSize: '0.88rem',
+                              fontFamily: 'inherit',
+                              outline: 'none',
+                              boxSizing: 'border-box'
+                            }}
+                          />
+                        </div>
                         
                         {/* FAQ category selection */}
                         <div>
@@ -855,10 +924,29 @@ function AdminDashboard() {
                     </span>
                   </div>
 
-                  {/* Question */}
-                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
-                    {q.question}
-                  </h3>
+                  {/* Editable Question Input */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: C.muted2, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                      Edit Question Text
+                    </label>
+                    <input
+                      type="text"
+                      value={editedQuestion[q._id] !== undefined ? editedQuestion[q._id] : q.question}
+                      onChange={(e) => setEditedQuestion(prev => ({ ...prev, [q._id]: e.target.value }))}
+                      style={{
+                        width: '100%',
+                        background: '#0d0c1b',
+                        border: `1px solid ${C.border}`,
+                        borderRadius: '10px',
+                        color: C.text,
+                        padding: '0.75rem 1rem',
+                        fontSize: '0.9rem',
+                        fontFamily: 'inherit',
+                        outline: 'none',
+                        boxSizing: 'border-box'
+                      }}
+                    />
+                  </div>
 
                   {/* Answer Input */}
                   <div style={{ marginBottom: '1.25rem' }}>
@@ -1031,6 +1119,14 @@ function AdminDashboard() {
             )}
           </div>
         )}
+
+        </div>
+
+        {/* Right Column: Leaderboards */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '1.5rem' }}>
+          <Leaderboard title="Student Leaderboard" data={studentsLeaderboard} type="students" />
+          <Leaderboard title="Admin Leaderboard" data={adminsLeaderboard} type="admins" />
+        </div>
 
       </div>
     </div>

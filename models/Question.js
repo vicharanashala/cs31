@@ -4,7 +4,7 @@ const ReplySchema = new mongoose.Schema({
   text: { type: String, required: true, trim: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: 'createdByModel'
+    refPath: 'replies.createdByModel'
   },
   createdByModel: {
     type: String,
@@ -33,7 +33,7 @@ const ReplySchema = new mongoose.Schema({
   },
   markedSolutionBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: 'markedSolutionByModel',
+    refPath: 'replies.markedSolutionByModel',
     default: null
   },
   markedSolutionByModel: {

@@ -283,6 +283,23 @@ router.post('/:id/reply', auth, async (req, res) => {
     });
     
     await question.save();
+
+    // Notify question owner
+    if (question.createdBy && question.createdBy.toString() !== req.user.id) {
+      try {
+        const Notification = require('../models/Notification');
+        const replyUser = await User.findById(req.user.id);
+        const newNotification = new Notification({
+          userId: question.createdBy,
+          text: `💬 ${replyUser ? replyUser.name : 'A student'} replied to your question: "${question.question.substring(0, 40)}..."`,
+          type: 'reply',
+          link: `/questions`
+        });
+        await newNotification.save();
+      } catch (err) {
+        console.error('Notification creation error:', err);
+      }
+    }
     
     const populatedQuestion = await populateQuestion(question._id);
     
@@ -362,9 +379,8 @@ router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
       return res.status(404).json({ message: 'Question not found' });
     }
 
-    const user = await User.findById(req.user.id);
     const isAsker = question.createdBy?.toString() === req.user.id;
-    const isAdmin = user?.role === 'admin';
+    const isAdmin = req.user.role === 'admin';
 
     if (!isAsker && !isAdmin) {
       return res.status(403).json({ message: 'Only the asker or an admin can mark a solution' });
@@ -376,14 +392,63 @@ router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
     }
 
     const shouldMark = !reply.isSolution;
-    question.replies.forEach(existingReply => {
-      existingReply.isSolution = false;
-      existingReply.markedSolutionBy = null;
-    });
+    const Notification = require('../models/Notification');
+
+    // 1. Unmark all existing solutions and deduct points
+    for (const existingReply of question.replies) {
+      if (existingReply.isSolution) {
+        existingReply.isSolution = false;
+        existingReply.markedSolutionBy = null;
+        
+        const prevAuthor = await User.findById(existingReply.createdBy);
+        if (prevAuthor) {
+          prevAuthor.spurtiPoints = Math.max(0, (prevAuthor.spurtiPoints || 10) - 2);
+          await prevAuthor.save();
+          
+          const prevNotif = new Notification({
+            userId: prevAuthor._id,
+            text: `⚠️ Your reply was unmarked as a solution. -2 SP. (Current Balance: ${prevAuthor.spurtiPoints} SP)`,
+            type: 'points',
+            link: `/questions`
+          });
+          await prevNotif.save();
+        }
+      }
+    }
+
+    // 2. Mark/unmark selected reply
     reply.isSolution = shouldMark;
     reply.markedSolutionBy = shouldMark ? req.user.id : null;
 
     await question.save();
+
+    // 3. Award points and notify for the new solution state
+    const replyAuthor = await User.findById(reply.createdBy);
+    if (replyAuthor) {
+      if (shouldMark) {
+        replyAuthor.spurtiPoints = (replyAuthor.spurtiPoints || 10) + 2;
+        await replyAuthor.save();
+        
+        const newNotif = new Notification({
+          userId: replyAuthor._id,
+          text: `🎉 Your reply on question: "${question.question.substring(0, 30)}..." was marked as the solution! Awarded +2 SP. (Current Balance: ${replyAuthor.spurtiPoints} SP)`,
+          type: 'solution',
+          link: `/questions`
+        });
+        await newNotif.save();
+      } else {
+        replyAuthor.spurtiPoints = Math.max(0, (replyAuthor.spurtiPoints || 10) - 2);
+        await replyAuthor.save();
+        
+        const newNotif = new Notification({
+          userId: replyAuthor._id,
+          text: `⚠️ Your reply was unmarked as a solution. -2 SP. (Current Balance: ${replyAuthor.spurtiPoints} SP)`,
+          type: 'points',
+          link: `/questions`
+        });
+        await newNotif.save();
+      }
+    }
 
     res.json(await populateQuestion(question._id));
   } catch (err) {
@@ -394,8 +459,7 @@ router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
 
 router.get('/pending', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -414,10 +478,34 @@ router.get('/pending', auth, async (req, res) => {
   }
 });
 
+router.get('/faq-requests', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const questions = await Question.find({
+      upvoteCount: { $gt: 20 },
+      promotedToFAQ: 'none'
+    })
+      .populate('createdBy', 'name email role')
+      .populate('replies.createdBy', 'name email role')
+      .populate('replies.upvotes', 'name email')
+      .populate('replies.downvotes', 'name email')
+      .populate('upvotes', 'name email')
+      .populate('downvotes', 'name email')
+      .sort({ upvoteCount: -1, createdAt: -1 });
+    
+    res.json(questions);
+  } catch (err) {
+    console.error('Error fetching FAQ requests:', err);
+    res.status(500).json({ message: 'Error fetching FAQ requests' });
+  }
+});
+
 router.post('/:id/approve', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (user.role !== 'admin') {
+    if (req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -429,18 +517,60 @@ router.post('/:id/approve', auth, async (req, res) => {
     const faq = new FAQ({
       question: question.question,
       answer: req.body.answer || 'Answer to be added',
+      section: req.body.section || 'Community Contribution',
       createdBy: req.user.id
     });
     
     await faq.save();
     
+    const wasAlreadyApproved = question.promotedToFAQ === 'approved';
     question.status = 'approved';
+    question.promotedToFAQ = 'approved';
     await question.save();
+
+    // Award +5 SP points if not already approved, and notify the asker
+    if (!wasAlreadyApproved && question.createdBy) {
+      const asker = await User.findById(question.createdBy);
+      if (asker) {
+        asker.spurtiPoints = (asker.spurtiPoints || 10) + 5;
+        await asker.save();
+
+        const Notification = require('../models/Notification');
+        const notif = new Notification({
+          userId: asker._id,
+          text: `🏆 Your question: "${question.question.substring(0, 30)}..." was promoted to FAQ! Awarded +5 SP. (Current Balance: ${asker.spurtiPoints} SP)`,
+          type: 'faq_promotion',
+          link: '/faqs'
+        });
+        await notif.save();
+      }
+    }
     
     res.json({ message: 'Question approved and added to FAQ', faq });
   } catch (err) {
     console.error('Approve Error:', err);
     res.status(500).json({ message: 'Error approving question' });
+  }
+});
+
+router.post('/:id/deny-faq', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+    
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+    
+    question.promotedToFAQ = 'denied';
+    await question.save();
+    
+    res.json({ message: 'FAQ promote request denied successfully', question });
+  } catch (err) {
+    console.error('Deny FAQ Error:', err);
+    res.status(500).json({ message: 'Error denying FAQ request' });
   }
 });
 

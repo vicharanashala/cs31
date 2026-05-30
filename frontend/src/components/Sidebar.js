@@ -1,11 +1,69 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import axios from 'axios';
 
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const user = JSON.parse(localStorage.getItem('user') || '{"name":"User","email":"user@study.iitm.ac.in","role":"student"}');
-  const isAdmin = user.role === 'admin';
+  const token = localStorage.getItem('token');
+
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('user') || '{"name":"User","email":"user@study.iitm.ac.in","role":"student","spurtiPoints":10}');
+    } catch {
+      return { name: 'User', email: 'user@study.iitm.ac.in', role: 'student', spurtiPoints: 10 };
+    }
+  });
+
+  const [unreadCount, setUnreadCount] = useState(0);
+  const isAdmin = currentUser.role === 'admin';
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchData = async () => {
+      const config = { headers: { 'x-auth-token': token } };
+      try {
+        const userRes = await axios.get('/api/auth/me', config);
+        if (userRes.data && userRes.data.user) {
+          const updatedUser = userRes.data.user;
+          setCurrentUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
+      } catch (err) {
+        console.error('Error fetching user info in sidebar:', err);
+        if (err.response && err.response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          navigate('/login');
+        }
+      }
+
+      try {
+        const notifRes = await axios.get('/api/notifications', config);
+        if (Array.isArray(notifRes.data)) {
+          const unread = notifRes.data.filter(n => !n.isRead).length;
+          setUnreadCount(unread);
+        }
+      } catch (err) {
+        console.error('Error fetching notifications in sidebar:', err);
+      }
+    };
+
+    fetchData();
+    const interval = setInterval(fetchData, 10000); // Poll every 10 seconds
+
+    const handleUpdate = () => {
+      fetchData();
+    };
+
+    window.addEventListener('notifications_updated', handleUpdate);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('notifications_updated', handleUpdate);
+    };
+  }, [token, navigate]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -28,18 +86,52 @@ function Sidebar() {
       name: 'Post Questions',
       path: '/questions',
       icon: '🏆'
+    },
+    {
+      name: 'Notifications',
+      path: '/notifications',
+      icon: '🔔',
+      badge: unreadCount
     }
   ];
 
   if (isAdmin) {
     menuItems.push({
-      name: 'Admin Dashboard',
+      name: 'FAQ requests',
       path: '/admin',
       icon: '🛠️'
     });
   }
 
-  const initials = user.name ? user.name.charAt(0).toUpperCase() : 'U';
+  const initials = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
+
+  const getBadgeTier = (points) => {
+    const pts = points !== undefined ? points : 10;
+    if (pts >= 30) {
+      return {
+        name: '🏆 FAQ MASTER',
+        color: '#fbbf24',
+        bg: 'rgba(251, 191, 36, 0.1)',
+        border: 'rgba(251, 191, 36, 0.25)'
+      };
+    } else if (pts >= 20) {
+      return {
+        name: '🌟 FAQ PRO',
+        color: '#06b6d4',
+        bg: 'rgba(6, 182, 212, 0.1)',
+        border: 'rgba(6, 182, 212, 0.25)'
+      };
+    } else {
+      return {
+        name: '🏅 FAQ STARTER',
+        color: '#a78bfa',
+        bg: 'rgba(167, 139, 250, 0.08)',
+        border: 'rgba(167, 139, 250, 0.2)'
+      };
+    }
+  };
+
+  const badge = getBadgeTier(currentUser.spurtiPoints);
 
   return (
     <div style={{
@@ -83,42 +175,48 @@ function Sidebar() {
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user.name}
+                {currentUser.name}
               </h4>
               <p style={{ margin: 0, fontSize: '0.72rem', color: '#7a7990', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {user.email}
+                {currentUser.email}
               </p>
             </div>
           </div>
 
-          {/* Level and XP */}
+          {/* Spurti Points (SP) Box */}
           <div style={{ marginTop: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.78rem', fontWeight: 600, color: '#fff' }}>
-                🔥 Level 1
-              </span>
-              <span style={{ fontSize: '0.78rem', fontWeight: 600, color: '#a78bfa' }}>
-                100 XP
-              </span>
-            </div>
-            {/* Progress Bar */}
             <div style={{
-              width: '100%',
-              height: '6px',
-              background: '#1d1933',
-              borderRadius: '3px',
-              overflow: 'hidden'
+              background: 'linear-gradient(135deg, rgba(124, 106, 245, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%)',
+              border: '1px solid rgba(124, 106, 245, 0.25)',
+              borderRadius: '12px',
+              padding: '0.85rem 1rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05)'
             }}>
+              <div>
+                <span style={{ display: 'block', fontSize: '0.68rem', color: '#a78bfa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Spurti Points
+                </span>
+                <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'baseline', gap: '0.2rem', marginTop: '0.15rem' }}>
+                  {currentUser.spurtiPoints !== undefined ? currentUser.spurtiPoints : 10}
+                  <span style={{ fontSize: '0.8rem', color: '#06b6d4', fontWeight: 700 }}>SP</span>
+                </span>
+              </div>
               <div style={{
-                width: '60%',
-                height: '100%',
-                background: 'linear-gradient(90deg, #a78bfa 0%, #06b6d4 100%)',
-                borderRadius: '3px'
-              }} />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '0.3rem', fontSize: '0.68rem', color: '#7a7990' }}>
-              <span>0 XP</span>
-              <span>To Level 2 (100 XP needed)</span>
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                background: 'rgba(124, 106, 245, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.2rem',
+                boxShadow: '0 0 10px rgba(124, 106, 245, 0.2)'
+              }}>
+                ✨
+              </div>
             </div>
           </div>
 
@@ -131,15 +229,15 @@ function Sidebar() {
               display: 'inline-flex',
               alignItems: 'center',
               gap: '0.35rem',
-              background: 'rgba(167, 139, 250, 0.1)',
-              border: '1px solid rgba(167, 139, 250, 0.25)',
+              background: badge.bg,
+              border: `1px solid ${badge.border}`,
               borderRadius: '6px',
               padding: '0.25rem 0.6rem',
-              color: '#a78bfa',
+              color: badge.color,
               fontSize: '0.68rem',
               fontWeight: 700
             }}>
-              🏅 FAQ STARTER
+              {badge.name}
             </div>
           </div>
         </div>
@@ -190,6 +288,20 @@ function Sidebar() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <span style={{ fontSize: '1rem' }}>{item.icon}</span>
                     <span>{item.name}</span>
+                    {item.badge > 0 && (
+                      <span style={{
+                        background: '#f87171',
+                        color: '#fff',
+                        fontSize: '0.7rem',
+                        fontWeight: 700,
+                        padding: '0.15rem 0.45rem',
+                        borderRadius: '10px',
+                        marginLeft: '0.5rem',
+                        boxShadow: '0 0 8px rgba(248, 113, 113, 0.4)'
+                      }}>
+                        {item.badge}
+                      </span>
+                    )}
                   </div>
                   {isActive && (
                     <div style={{
@@ -211,30 +323,6 @@ function Sidebar() {
       {/* Bottom Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <button
-          onClick={() => alert('Profile editing is simulated. Details are managed automatically.')}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            width: '100%',
-            padding: '0.65rem',
-            background: 'transparent',
-            border: '1px solid #1e1b38',
-            borderRadius: '8px',
-            color: '#a7a6c0',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s'
-          }}
-          onMouseEnter={(e) => { e.target.style.background = 'rgba(255,255,255,0.03)'; e.target.style.color = '#fff'; }}
-          onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#a7a6c0'; }}
-        >
-          👤 Edit Profile
-        </button>
-
-        <button
           onClick={handleLogout}
           style={{
             display: 'flex',
@@ -255,7 +343,7 @@ function Sidebar() {
           onMouseEnter={(e) => { e.target.style.background = 'rgba(248,113,113,0.08)'; }}
           onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
         >
-          ➔ Terminate Session
+          ➔ Log Out
         </button>
       </div>
     </div>

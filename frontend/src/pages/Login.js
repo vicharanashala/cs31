@@ -21,7 +21,11 @@ function Login() {
       const res = await axios.post('/api/auth/login', formData);
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/faqs');
+      if (res.data.user && res.data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/faqs');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

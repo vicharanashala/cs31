@@ -6,6 +6,7 @@ import FAQ from './pages/FAQ';
 import Questions from './pages/Questions';
 import AdminDashboard from './pages/AdminDashboard';
 import AiSupport from './pages/AiSupport';
+import Notifications from './pages/Notifications';
 import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
@@ -39,6 +40,13 @@ function App() {
             <PrivateRoute>
               <DashboardLayout>
                 <AiSupport />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/notifications" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Notifications />
               </DashboardLayout>
             </PrivateRoute>
           } />

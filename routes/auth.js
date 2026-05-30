@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 const ALLOWED_EMAILS = require('../config/allowedEmails');
 const auth = require('../middleware/auth');
 
@@ -51,7 +52,7 @@ router.post('/signup', async (req, res) => {
     res.status(201).json({
       message: 'Signup successful!',
       token,
-      user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role }
+      user: { id: newUser._id, name: newUser.name, email: newUser.email, role: newUser.role, spurtiPoints: newUser.spurtiPoints }
     });
   } catch (err) {
     console.error('Signup Error:', err);
@@ -68,6 +69,28 @@ router.post('/login', async (req, res) => {
   }
 
   try {
+    // 1. Check if email exists in Admin collection
+    const admin = await Admin.findOne({ email: email.toLowerCase() });
+    if (admin) {
+      const isMatch = await bcrypt.compare(password, admin.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Invalid email or password' });
+      }
+
+      const token = jwt.sign(
+        { id: admin._id, email: admin.email, role: 'admin' },
+        process.env.JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+
+      return res.json({
+        message: 'Login successful!',
+        token,
+        user: { id: admin._id, name: admin.name, email: admin.email, role: 'admin' }
+      });
+    }
+
+    // 2. If not found in Admin, check User collection (students)
     const user = await User.findOne({ email: email.toLowerCase() });
     if (!user) {
       return res.status(400).json({ message: 'Invalid email or password' });
@@ -79,7 +102,7 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email },
+      { id: user._id, email: user.email, role: user.role || 'student' },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -87,7 +110,7 @@ router.post('/login', async (req, res) => {
     res.json({
       message: 'Login successful!',
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, email: user.email, role: user.role || 'student', spurtiPoints: user.spurtiPoints }
     });
   } catch (err) {
     console.error('Login Error:', err);
@@ -98,12 +121,29 @@ router.post('/login', async (req, res) => {
 // Get current user (protected)
 router.get('/me', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id).select('-password');
+    let user = await Admin.findById(req.user.id).select('-password');
+    let role = 'admin';
+    
+    if (!user) {
+      user = await User.findById(req.user.id).select('-password');
+      role = user ? (user.role || 'student') : 'student';
+    }
+    
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-    res.json({ user });
+    
+    res.json({
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: role,
+        spurtiPoints: user.spurtiPoints
+      }
+    });
   } catch (err) {
+    console.error('Get Me Error:', err);
     res.status(500).json({ message: 'Server error' });
   }
 });

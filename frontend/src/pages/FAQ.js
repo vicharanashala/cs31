@@ -26,18 +26,7 @@ function FAQ() {
   const fetchSections = async () => {
     try {
       const res = await axios.get('/api/faqs/sections');
-      // Ensure we include sections from the screenshot and database
-      const dbSections = res.data;
-      const expectedSections = [
-        "General",
-        "Stipend & Perks",
-        "Tech Stack",
-        "Application Process",
-        "Evaluation & Certificate"
-      ];
-      // Merge and keep unique
-      const merged = Array.from(new Set([...expectedSections, ...dbSections]));
-      setSections(merged);
+      setSections(res.data);
     } catch (err) {
       console.error('Error fetching sections:', err);
     }

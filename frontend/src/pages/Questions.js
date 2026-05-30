@@ -195,17 +195,20 @@ function Questions() {
     navigate(`/faqs?faq=${faqId}`);
   };
 
-  // --- Permission helpers ---
   const canMarkSolution = (q) => {
     if (!user.id) return false;
+    if (user.role === 'admin') return true;
     const authorId = q.createdBy?._id || q.createdBy;
     const isAuthor = authorId === user.id;
-    return (user.role === 'admin' || isAuthor) && q.status === 'approved';
+    return isAuthor && q.status === 'approved';
   };
 
   const canUnmarkSolution = (q) => {
     if (!user.id) return false;
-    return user.role === 'admin' && q.status === 'approved';
+    if (user.role === 'admin') return true;
+    const authorId = q.createdBy?._id || q.createdBy;
+    const isAuthor = authorId === user.id;
+    return isAuthor && q.status === 'approved';
   };
 
   return (
@@ -427,11 +430,12 @@ function Questions() {
         {/* Question Feed cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
           {getDisplayedQuestions().map((q) => (
-            <div key={q._id} style={{
+            <div key={q._id} id={`question-card-${q._id}`} style={{
               background: C.surface,
               border: `1px solid ${C.border}`,
               borderRadius: '16px',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              transition: 'all 0.4s ease'
             }}>
               {/* Question body card */}
               <div style={{ padding: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
@@ -626,7 +630,7 @@ function Questions() {
                         </button>
 
                         {/* Mark Solution Action */}
-                        {canMarkSolution(q) && !reply.isSolution && (
+                        {canMarkSolution(q) && !reply.isSolution && !q.replies.some(r => r.isSolution) && (
                           <button
                             onClick={() => handleMarkSolution(q._id, reply._id)}
                             style={{

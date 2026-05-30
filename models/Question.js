@@ -76,6 +76,11 @@ const QuestionSchema = new mongoose.Schema({
     enum: ['pending', 'approved', 'rejected'],
     default: 'pending'
   },
+  promotedToFAQ: {
+    type: String,
+    enum: ['none', 'approved', 'denied'],
+    default: 'none'
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

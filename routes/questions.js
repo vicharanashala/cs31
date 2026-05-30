@@ -171,6 +171,7 @@ router.post('/', auth, async (req, res) => {
     const newQuestion = new Question({
       question: question.trim(),
       createdBy: req.user.id,
+      createdByModel: req.user.role === 'admin' ? 'Admin' : 'User',
       similarity: bestMatch ? bestMatch.score : 0,
       similarityPercent: bestMatch ? bestMatch.confidence : 0,
       similarTo: bestMatch ? bestMatch.data._id : null,
@@ -279,7 +280,8 @@ router.post('/:id/reply', auth, async (req, res) => {
     
     question.replies.push({
       text: text.trim(),
-      createdBy: req.user.id
+      createdBy: req.user.id,
+      createdByModel: req.user.role === 'admin' ? 'Admin' : 'User'
     });
     
     await question.save();
@@ -288,10 +290,20 @@ router.post('/:id/reply', auth, async (req, res) => {
     if (question.createdBy && question.createdBy.toString() !== req.user.id) {
       try {
         const Notification = require('../models/Notification');
-        const replyUser = await User.findById(req.user.id);
+        let replyUser;
+        let displayName = 'A student';
+        if (req.user.role === 'admin') {
+          const Admin = require('../models/Admin');
+          replyUser = await Admin.findById(req.user.id);
+          displayName = replyUser ? `Admin ${replyUser.name}` : 'An Admin';
+        } else {
+          replyUser = await User.findById(req.user.id);
+          displayName = replyUser ? replyUser.name : 'A student';
+        }
+
         const newNotification = new Notification({
           userId: question.createdBy,
-          text: `💬 ${replyUser ? replyUser.name : 'A student'} replied to your question: "${question.question.substring(0, 40)}..."`,
+          text: `💬 ${displayName} replied to your question: "${question.question.substring(0, 40)}..."`,
           type: 'reply',
           link: `/questions`
         });
@@ -399,6 +411,7 @@ router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
       if (existingReply.isSolution) {
         existingReply.isSolution = false;
         existingReply.markedSolutionBy = null;
+        existingReply.markedSolutionByModel = 'User';
         
         const prevAuthor = await User.findById(existingReply.createdBy);
         if (prevAuthor) {
@@ -419,6 +432,7 @@ router.post('/:id/replies/:replyId/solution', auth, async (req, res) => {
     // 2. Mark/unmark selected reply
     reply.isSolution = shouldMark;
     reply.markedSolutionBy = shouldMark ? req.user.id : null;
+    reply.markedSolutionByModel = shouldMark ? (req.user.role === 'admin' ? 'Admin' : 'User') : 'User';
 
     await question.save();
 

@@ -2,7 +2,15 @@ const mongoose = require('mongoose');
 
 const ReplySchema = new mongoose.Schema({
   text: { type: String, required: true, trim: true },
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    refPath: function() { return this.createdByModel || 'User'; }
+  },
+  createdByModel: {
+    type: String,
+    enum: ['User', 'Admin'],
+    default: 'User'
+  },
   upvotes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -25,8 +33,13 @@ const ReplySchema = new mongoose.Schema({
   },
   markedSolutionBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    refPath: function() { return this.markedSolutionByModel || 'User'; },
     default: null
+  },
+  markedSolutionByModel: {
+    type: String,
+    enum: ['User', 'Admin'],
+    default: 'User'
   },
   createdAt: { type: Date, default: Date.now }
 });
@@ -83,7 +96,12 @@ const QuestionSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    refPath: function() { return this.createdByModel || 'User'; }
+  },
+  createdByModel: {
+    type: String,
+    enum: ['User', 'Admin'],
+    default: 'User'
   }
 }, {
   timestamps: true

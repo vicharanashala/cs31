@@ -92,7 +92,7 @@ const faqs = [
   { question: '10.7 What are the attendance and participation rules?', answer: 'Attendance and participation are tracked against strict thresholds. Missing standups is treated as missing work.', section: 'Phase 1 — coursework, Vibe LMS, and live sessions' }
 ];
 
-mongoose.connect('mongodb+srv://bipin:bipinlovespython@cluster0.w8lpzre.mongodb.net/?appName=Cluster0')
+mongoose.connect(process.env.MONGODB_URI)
   .then(async () => {
     await FAQ.deleteMany({});
     await FAQ.insertMany(faqs);

@@ -4,7 +4,7 @@ const ReplySchema = new mongoose.Schema({
   text: { type: String, required: true, trim: true },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: function() { return this.createdByModel || 'User'; }
+    refPath: 'createdByModel'
   },
   createdByModel: {
     type: String,
@@ -33,7 +33,7 @@ const ReplySchema = new mongoose.Schema({
   },
   markedSolutionBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: function() { return this.markedSolutionByModel || 'User'; },
+    refPath: 'markedSolutionByModel',
     default: null
   },
   markedSolutionByModel: {
@@ -96,7 +96,7 @@ const QuestionSchema = new mongoose.Schema({
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: function() { return this.createdByModel || 'User'; }
+    refPath: 'createdByModel'
   },
   createdByModel: {
     type: String,

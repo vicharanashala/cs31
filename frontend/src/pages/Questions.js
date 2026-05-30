@@ -20,6 +20,24 @@ const C = {
   muted2: '#b4b3c8',       // slightly brighter muted
 };
 
+const getUserBadge = (user) => {
+  if (!user) return { name: 'Student', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.08)', border: 'rgba(167, 139, 250, 0.2)' };
+  if (user.role === 'admin') {
+    return { name: 'Admin', color: '#f87171', bg: 'rgba(248, 113, 113, 0.12)', border: 'rgba(248, 113, 113, 0.25)' };
+  }
+  const pts = user.spurtiPoints !== undefined ? user.spurtiPoints : 10;
+  if (pts >= 500) {
+    return { name: 'Coordinator', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)', border: 'rgba(251, 191, 36, 0.25)' };
+  }
+  if (pts >= 300) {
+    return { name: 'Sub-Coordinator', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)', border: 'rgba(56, 189, 248, 0.25)' };
+  }
+  if (pts >= 200) {
+    return { name: 'Volunteer', color: '#c084fc', bg: 'rgba(192, 132, 252, 0.1)', border: 'rgba(192, 132, 252, 0.25)' };
+  }
+  return { name: 'Student', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.08)', border: 'rgba(167, 139, 250, 0.2)' };
+};
+
 function Questions() {
   const [questions, setQuestions] = useState([]);
   const [myQuestions, setMyQuestions] = useState([]);
@@ -521,6 +539,24 @@ function Questions() {
                     <span style={{ fontWeight: 600, color: '#9f9eaf' }}>
                       {q.createdBy?.name || 'Unknown'}
                     </span>
+                    {(() => {
+                      const b = getUserBadge(q.createdBy);
+                      return (
+                        <span style={{
+                          background: b.bg,
+                          color: b.color,
+                          border: `1px solid ${b.border}`,
+                          borderRadius: '4px',
+                          padding: '1px 5px',
+                          fontSize: '0.62rem',
+                          fontWeight: 700,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em'
+                        }}>
+                          {b.name}
+                        </span>
+                      );
+                    })()}
                     <span>•</span>
                     <span>
                       {new Date(q.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -587,6 +623,24 @@ function Questions() {
                       {/* Reply Metadata & Votes */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: C.muted }}>
                         <span style={{ fontWeight: 600, color: '#9f9eaf' }}>by {reply.createdBy?.name || 'Unknown'}</span>
+                        {(() => {
+                          const b = getUserBadge(reply.createdBy);
+                          return (
+                            <span style={{
+                              background: b.bg,
+                              color: b.color,
+                              border: `1px solid ${b.border}`,
+                              borderRadius: '4px',
+                              padding: '1px 5px',
+                              fontSize: '0.62rem',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.04em'
+                            }}>
+                              {b.name}
+                            </span>
+                          );
+                        })()}
                         <span>•</span>
                         
                         {/* Reply Upvote */}

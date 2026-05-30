@@ -38,11 +38,11 @@ function syncReplyVoteCounts(reply) {
 
 function populateQuestion(questionId) {
   return Question.findById(questionId)
-    .populate('createdBy', 'name email role')
-    .populate('replies.createdBy', 'name email role')
+    .populate('createdBy', 'name email role spurtiPoints')
+    .populate('replies.createdBy', 'name email role spurtiPoints')
     .populate('replies.upvotes', 'name email')
     .populate('replies.downvotes', 'name email')
-    .populate('replies.markedSolutionBy', 'name email role')
+    .populate('replies.markedSolutionBy', 'name email role spurtiPoints')
     .populate('upvotes', 'name email')
     .populate('downvotes', 'name email');
 }
@@ -106,11 +106,11 @@ function findSimilarQuestion(questionText, excludeId = null) {
 router.get('/', async (req, res) => {
   try {
     const questions = await Question.find()
-      .populate('createdBy', 'name email role')
-      .populate('replies.createdBy', 'name email role')
+      .populate('createdBy', 'name email role spurtiPoints')
+      .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
       .populate('replies.downvotes', 'name email')
-      .populate('replies.markedSolutionBy', 'name email role')
+      .populate('replies.markedSolutionBy', 'name email role spurtiPoints')
       .populate('upvotes', 'name email')
       .populate('downvotes', 'name email')
       .sort({ upvoteCount: -1, createdAt: -1 });
@@ -124,11 +124,11 @@ router.get('/', async (req, res) => {
 router.get('/my', auth, async (req, res) => {
   try {
     const questions = await Question.find({ createdBy: req.user.id })
-      .populate('createdBy', 'name email role')
-      .populate('replies.createdBy', 'name email role')
+      .populate('createdBy', 'name email role spurtiPoints')
+      .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
       .populate('replies.downvotes', 'name email')
-      .populate('replies.markedSolutionBy', 'name email role')
+      .populate('replies.markedSolutionBy', 'name email role spurtiPoints')
       .populate('upvotes', 'name email')
       .populate('downvotes', 'name email')
       .sort({ createdAt: -1 });
@@ -464,8 +464,8 @@ router.get('/pending', auth, async (req, res) => {
     }
     
     const questions = await Question.find({ status: 'pending' })
-      .populate('createdBy', 'name email role')
-      .populate('replies.createdBy', 'name email role')
+      .populate('createdBy', 'name email role spurtiPoints')
+      .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
       .populate('replies.downvotes', 'name email')
       .populate('upvotes', 'name email')
@@ -488,8 +488,8 @@ router.get('/faq-requests', auth, async (req, res) => {
       upvoteCount: { $gt: 20 },
       promotedToFAQ: 'none'
     })
-      .populate('createdBy', 'name email role')
-      .populate('replies.createdBy', 'name email role')
+      .populate('createdBy', 'name email role spurtiPoints')
+      .populate('replies.createdBy', 'name email role spurtiPoints')
       .populate('replies.upvotes', 'name email')
       .populate('replies.downvotes', 'name email')
       .populate('upvotes', 'name email')

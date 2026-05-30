@@ -105,25 +105,41 @@ function Sidebar() {
 
   const initials = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
 
-  const getBadgeTier = (points) => {
-    const pts = points !== undefined ? points : 10;
-    if (pts >= 30) {
+  const getBadgeTier = (user) => {
+    if (!user) return { name: 'Student', color: '#7a7990', bg: 'rgba(122, 121, 144, 0.1)', border: 'rgba(122, 121, 144, 0.2)' };
+    if (user.role === 'admin') {
       return {
-        name: '🏆 FAQ MASTER',
-        color: '#fbbf24',
-        bg: 'rgba(251, 191, 36, 0.1)',
-        border: 'rgba(251, 191, 36, 0.25)'
+        name: '👑 Admin',
+        color: '#f87171',
+        bg: 'rgba(248, 113, 113, 0.1)',
+        border: 'rgba(248, 113, 113, 0.25)'
       };
-    } else if (pts >= 20) {
+    }
+    const pts = user.spurtiPoints !== undefined ? user.spurtiPoints : 10;
+    if (pts >= 500) {
       return {
-        name: '🌟 FAQ PRO',
-        color: '#06b6d4',
-        bg: 'rgba(6, 182, 212, 0.1)',
-        border: 'rgba(6, 182, 212, 0.25)'
+        name: '🛡️ Coordinator',
+        color: '#fbbf24',
+        bg: 'rgba(251, 191, 36, 0.12)',
+        border: 'rgba(251, 191, 36, 0.3)'
+      };
+    } else if (pts >= 300) {
+      return {
+        name: '⚡ Sub-Coordinator',
+        color: '#38bdf8',
+        bg: 'rgba(56, 189, 248, 0.1)',
+        border: 'rgba(56, 189, 248, 0.25)'
+      };
+    } else if (pts >= 200) {
+      return {
+        name: '🌟 Volunteer',
+        color: '#c084fc',
+        bg: 'rgba(192, 132, 252, 0.1)',
+        border: 'rgba(192, 132, 252, 0.25)'
       };
     } else {
       return {
-        name: '🏅 FAQ STARTER',
+        name: '📖 Student',
         color: '#a78bfa',
         bg: 'rgba(167, 139, 250, 0.08)',
         border: 'rgba(167, 139, 250, 0.2)'
@@ -131,7 +147,7 @@ function Sidebar() {
     }
   };
 
-  const badge = getBadgeTier(currentUser.spurtiPoints);
+  const badge = getBadgeTier(currentUser);
 
   return (
     <div style={{

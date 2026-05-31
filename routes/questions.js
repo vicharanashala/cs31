@@ -3,6 +3,7 @@ const router = express.Router();
 const Question = require('../models/Question');
 const FAQ = require('../models/FAQ');
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 const auth = require('../middleware/auth');
 const {
   DUPLICATE_CONFIDENCE_THRESHOLD,
@@ -593,8 +594,8 @@ router.post('/:id/deny-faq', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
-    if (user.role !== 'admin') {
+    // Allow if role is 'admin' in JWT, or fallback to DB check for older tokens
+    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
       return res.status(403).json({ message: 'Admin access required' });
     }
     
@@ -612,7 +613,8 @@ router.delete('/:id', auth, async (req, res) => {
 // GET all reported questions and replies (Admin only)
 router.get('/reported', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    // Allow if role is 'admin' in JWT, or fallback to DB check for older tokens
+    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
       return res.status(403).json({ message: 'Admin access required' });
     }
 
@@ -796,7 +798,8 @@ router.post('/:id/replies/:replyId/dismiss-reports', auth, async (req, res) => {
 // DELETE a reply (Admin only)
 router.delete('/:id/replies/:replyId', auth, async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
+    // Allow if role is 'admin' in JWT, or fallback to DB check for older tokens
+    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
       return res.status(403).json({ message: 'Admin access required' });
     }
 

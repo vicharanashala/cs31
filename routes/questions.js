@@ -41,11 +41,11 @@ function populateQuestion(questionId) {
   return Question.findById(questionId)
     .populate('createdBy', 'name email role spurtiPoints')
     .populate('replies.createdBy', 'name email role spurtiPoints')
-    .populate('replies.upvotes', 'name email')
-    .populate('replies.downvotes', 'name email')
+    .populate('replies.upvotes', '_id name email')
+    .populate('replies.downvotes', '_id name email')
     .populate('replies.markedSolutionBy', 'name email role spurtiPoints')
-    .populate('upvotes', 'name email')
-    .populate('downvotes', 'name email');
+    .populate('upvotes', '_id name email')
+    .populate('downvotes', '_id name email');
 }
 
 function serializeSimilarMatch(match) {

@@ -39,6 +39,7 @@ function AdminDashboard() {
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('faqRequests');
   const [searchQuery, setSearchQuery] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null); // { label, message, onConfirm }
 
   const token = localStorage.getItem('token');
   const config = { headers: { 'x-auth-token': token } };
@@ -172,45 +173,57 @@ function AdminDashboard() {
   };
 
   const handleDenyFAQRequest = async (questionId) => {
-    if (!window.confirm('Are you sure you want to deny this FAQ promotion request? The question will remain in the community questions feed but will be removed from this queue.')) return;
-    
-    try {
-      await axios.post(`/api/questions/${questionId}/deny-faq`, {}, config);
-      setMessage('FAQ promotion request denied successfully');
-      refreshAll();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage(err.response?.data?.message || 'Error denying FAQ request');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    setConfirmAction({
+      label: 'Deny Request',
+      message: 'Are you sure you want to deny this FAQ promotion request? The question will remain in the community questions feed but will be removed from this queue.',
+      onConfirm: async () => {
+        try {
+          await axios.post(`/api/questions/${questionId}/deny-faq`, {}, config);
+          setMessage('FAQ promotion request denied successfully');
+          refreshAll();
+          setTimeout(() => setMessage(''), 3000);
+        } catch (err) {
+          setMessage(err.response?.data?.message || 'Error denying FAQ request');
+          setTimeout(() => setMessage(''), 3000);
+        }
+      }
+    });
   };
 
   const handleReject = async (questionId) => {
-    if (!window.confirm('Are you sure you want to reject and delete this question request?')) return;
-    
-    try {
-      await axios.delete(`/api/questions/${questionId}`, config);
-      setMessage('Question deleted successfully');
-      refreshAll();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage(err.response?.data?.message || 'Error deleting question');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    setConfirmAction({
+      label: 'Reject Question',
+      message: 'Are you sure you want to reject and delete this question request?',
+      onConfirm: async () => {
+        try {
+          await axios.delete(`/api/questions/${questionId}`, config);
+          setMessage('Question deleted successfully');
+          refreshAll();
+          setTimeout(() => setMessage(''), 3000);
+        } catch (err) {
+          setMessage(err.response?.data?.message || 'Error deleting question');
+          setTimeout(() => setMessage(''), 3000);
+        }
+      }
+    });
   };
 
   const handleDeleteFAQ = async (faqId) => {
-    if (!window.confirm('Are you sure you want to delete this FAQ entry permanently?')) return;
-    
-    try {
-      await axios.delete(`/api/faqs/${faqId}`, config);
-      setMessage('FAQ entry deleted');
-      refreshAll();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      setMessage('Error deleting FAQ');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    setConfirmAction({
+      label: 'Delete FAQ',
+      message: 'Are you sure you want to delete this FAQ entry permanently?',
+      onConfirm: async () => {
+        try {
+          await axios.delete(`/api/faqs/${faqId}`, config);
+          setMessage('FAQ entry deleted');
+          refreshAll();
+          setTimeout(() => setMessage(''), 3000);
+        } catch (err) {
+          setMessage('Error deleting FAQ');
+          setTimeout(() => setMessage(''), 3000);
+        }
+      }
+    });
   };
 
   const handleDismissReport = async (item) => {
@@ -231,25 +244,29 @@ function AdminDashboard() {
   };
 
   const handleDeleteReportedItem = async (item) => {
-    const confirmMsg = item.type === 'question' 
+    const confirmMsg = item.type === 'question'
       ? 'Are you sure you want to permanently delete this reported question?'
       : 'Are you sure you want to permanently delete this reported reply?';
-    if (!window.confirm(confirmMsg)) return;
-
-    try {
-      if (item.type === 'question') {
-        await axios.delete(`/api/questions/${item.id}`, config);
-      } else {
-        await axios.delete(`/api/questions/${item.questionId}/replies/${item.id}`, config);
+    setConfirmAction({
+      label: 'Delete Reported ' + (item.type === 'question' ? 'Question' : 'Reply'),
+      message: confirmMsg,
+      onConfirm: async () => {
+        try {
+          if (item.type === 'question') {
+            await axios.delete(`/api/questions/${item.id}`, config);
+          } else {
+            await axios.delete(`/api/questions/${item.questionId}/replies/${item.id}`, config);
+          }
+          setMessage('Reported item deleted successfully');
+          refreshAll();
+          setTimeout(() => setMessage(''), 3000);
+        } catch (err) {
+          console.error('Error deleting reported item:', err);
+          setMessage(err.response?.data?.message || 'Error deleting reported item');
+          setTimeout(() => setMessage(''), 3000);
+        }
       }
-      setMessage('Reported item deleted successfully');
-      refreshAll();
-      setTimeout(() => setMessage(''), 3000);
-    } catch (err) {
-      console.error('Error deleting reported item:', err);
-      setMessage(err.response?.data?.message || 'Error deleting reported item');
-      setTimeout(() => setMessage(''), 3000);
-    }
+    });
   };
 
   // Helper to pre-populate form with highest upvoted reply if any
@@ -667,6 +684,72 @@ function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Inline confirmation modal */}
+      {confirmAction && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '420px',
+            width: '90%',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>⚠️</span>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-white)' }}>
+                Confirm {confirmAction.label}
+              </h2>
+            </div>
+            <p style={{ margin: '0 0 1.5rem 0', color: C.muted2, fontSize: '0.9rem', lineHeight: 1.6 }}>
+              {confirmAction.message}
+            </p>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '8px',
+                  border: `1px solid ${C.border}`,
+                  background: 'transparent',
+                  color: C.text,
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { confirmAction.onConfirm(); setConfirmAction(null); }}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: C.danger,
+                  color: '#fff',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer'
+                }}
+              >
+                {confirmAction.label}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div style={{

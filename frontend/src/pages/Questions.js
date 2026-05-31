@@ -523,8 +523,8 @@ function Questions() {
                   <VoteBtn
                     active={hasUpvoted(q)}
                     onClick={() => handleUpvote(q._id)}
-                    label="▲"
-                    filledLabel="▲"
+                    label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
+                    filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>}
                     activeColor="#22c55e"
                   />
                   <span style={{
@@ -538,8 +538,8 @@ function Questions() {
                   <VoteBtn
                     active={hasDownvoted(q)}
                     onClick={() => handleDownvote(q._id)}
-                    label="▼"
-                    filledLabel="▼"
+                    label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
+                    filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>}
                     activeColor="#ef4444"
                   />
                 </div>
@@ -744,7 +744,10 @@ function Questions() {
                             boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(34,197,94,0.2)' : 'none'
                           }}
                         >
-                          {hasReplyUpvoted(reply) ? '▲' : '▲'} {reply.upvoteCount || 0}
+                          {hasReplyUpvoted(reply)
+                            ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>
+                            : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
+                          } {reply.upvoteCount || 0}
                         </button>
 
                         {/* Reply Downvote */}
@@ -765,7 +768,10 @@ function Questions() {
                             boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(239,68,68,0.2)' : 'none'
                           }}
                         >
-                          {hasReplyDownvoted(reply) ? '▼' : '▼'} {reply.downvoteCount || 0}
+                          {hasReplyDownvoted(reply)
+                            ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>
+                            : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
+                          } {reply.downvoteCount || 0}
                         </button>
                         
                         <button

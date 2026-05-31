@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import { useTheme } from '../context/ThemeContext';
 
 function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const token = localStorage.getItem('token');
+  const { theme, toggleTheme } = useTheme();
 
   const [currentUser, setCurrentUser] = useState(() => {
     try {
@@ -58,10 +60,12 @@ function Sidebar() {
     };
 
     window.addEventListener('notifications_updated', handleUpdate);
+    window.addEventListener('profile_updated', handleUpdate);
 
     return () => {
       clearInterval(interval);
       window.removeEventListener('notifications_updated', handleUpdate);
+      window.removeEventListener('profile_updated', handleUpdate);
     };
   }, [token, navigate]);
 
@@ -111,43 +115,43 @@ function Sidebar() {
   const initials = currentUser.name ? currentUser.name.charAt(0).toUpperCase() : 'U';
 
   const getBadgeTier = (user) => {
-    if (!user) return { name: 'Student', color: '#7a7990', bg: 'rgba(122, 121, 144, 0.1)', border: 'rgba(122, 121, 144, 0.2)' };
+    if (!user) return { name: 'Student', color: 'var(--text-muted)', bg: 'var(--bg-hover)', border: 'var(--border-card)' };
     if (user.role === 'admin') {
       return {
         name: '👑 Admin',
-        color: '#f87171',
-        bg: 'rgba(248, 113, 113, 0.1)',
-        border: 'rgba(248, 113, 113, 0.25)'
+        color: 'var(--danger)',
+        bg: 'var(--danger-soft)',
+        border: 'var(--border-danger)'
       };
     }
     const pts = user.spurtiPoints !== undefined ? user.spurtiPoints : 10;
     if (pts >= 500) {
       return {
         name: '🛡️ Coordinator',
-        color: '#fbbf24',
-        bg: 'rgba(251, 191, 36, 0.12)',
-        border: 'rgba(251, 191, 36, 0.3)'
+        color: 'var(--warning)',
+        bg: 'var(--bg-active)',
+        border: 'var(--warning)'
       };
     } else if (pts >= 300) {
       return {
         name: '⚡ Sub-Coordinator',
-        color: '#38bdf8',
-        bg: 'rgba(56, 189, 248, 0.1)',
-        border: 'rgba(56, 189, 248, 0.25)'
+        color: 'var(--accent2)',
+        bg: 'var(--bg-hover)',
+        border: 'var(--accent2)'
       };
     } else if (pts >= 200) {
       return {
         name: '🌟 Volunteer',
-        color: '#c084fc',
-        bg: 'rgba(192, 132, 252, 0.1)',
-        border: 'rgba(192, 132, 252, 0.25)'
+        color: 'var(--accent)',
+        bg: 'var(--bg-active)',
+        border: 'var(--accent)'
       };
     } else {
       return {
         name: '📖 Student',
-        color: '#a78bfa',
-        bg: 'rgba(167, 139, 250, 0.08)',
-        border: 'rgba(167, 139, 250, 0.2)'
+        color: 'var(--accent)',
+        bg: 'var(--bg-active)',
+        border: 'var(--border-card)'
       };
     }
   };
@@ -155,10 +159,10 @@ function Sidebar() {
   const badge = getBadgeTier(currentUser);
 
   return (
-    <div style={{
+    <div className="sidebar" style={{
       width: '320px',
-      background: '#0d0c18',
-      borderRight: '1px solid #1e1b38',
+      background: 'var(--bg-sidebar)',
+      borderRight: '1px solid var(--border-sidebar)',
       display: 'flex',
       flexDirection: 'column',
       padding: '1.5rem',
@@ -171,8 +175,8 @@ function Sidebar() {
         
         {/* Profile Card */}
         <div style={{
-          background: '#121024',
-          border: '1px solid #1f1b3c',
+          background: 'var(--bg-card)',
+          border: '1px solid var(--border-card)',
           borderRadius: '16px',
           padding: '1.25rem',
           position: 'relative'
@@ -195,10 +199,10 @@ function Sidebar() {
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-white)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentUser.name}
               </h4>
-              <p style={{ margin: 0, fontSize: '0.72rem', color: '#7a7990', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentUser.email}
               </p>
             </div>
@@ -207,8 +211,8 @@ function Sidebar() {
           {/* Spurti Points (SP) Box */}
           <div style={{ marginTop: '1.25rem' }}>
             <div style={{
-              background: 'linear-gradient(135deg, rgba(124, 106, 245, 0.12) 0%, rgba(6, 182, 212, 0.1) 100%)',
-              border: '1px solid rgba(124, 106, 245, 0.25)',
+              background: 'linear-gradient(135deg, var(--bg-active) 0%, rgba(6, 182, 212, 0.05) 100%)',
+              border: '1px solid var(--border-card)',
               borderRadius: '12px',
               padding: '0.85rem 1rem',
               display: 'flex',
@@ -217,24 +221,24 @@ function Sidebar() {
               boxShadow: 'inset 0 1px 1px rgba(255,255,255,0.05)'
             }}>
               <div>
-                <span style={{ display: 'block', fontSize: '0.68rem', color: '#a78bfa', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ display: 'block', fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Spurti Points
                 </span>
-                <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#fff', display: 'flex', alignItems: 'baseline', gap: '0.2rem', marginTop: '0.15rem' }}>
+                <span style={{ fontSize: '1.35rem', fontWeight: 800, color: 'var(--text-white)', display: 'flex', alignItems: 'baseline', gap: '0.2rem', marginTop: '0.15rem' }}>
                   {currentUser.spurtiPoints !== undefined ? currentUser.spurtiPoints : 10}
-                  <span style={{ fontSize: '0.8rem', color: '#06b6d4', fontWeight: 700 }}>SP</span>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--accent2)', fontWeight: 700 }}>SP</span>
                 </span>
               </div>
               <div style={{
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                background: 'rgba(124, 106, 245, 0.2)',
+                background: 'var(--bg-active)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontSize: '1.2rem',
-                boxShadow: '0 0 10px rgba(124, 106, 245, 0.2)'
+                boxShadow: '0 0 10px var(--bg-active)'
               }}>
                 ✨
               </div>
@@ -242,8 +246,8 @@ function Sidebar() {
           </div>
 
           {/* Badges */}
-          <div style={{ marginTop: '1.25rem', borderTop: '1px solid #1d1933', paddingTop: '1rem' }}>
-            <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, color: '#7a7990', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
+          <div style={{ marginTop: '1.25rem', borderTop: '1px solid var(--border-card)', paddingTop: '1rem' }}>
+            <span style={{ display: 'block', fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.5rem' }}>
               Earned Badges & Distinctions
             </span>
             <div style={{
@@ -265,7 +269,7 @@ function Sidebar() {
 
         {/* Workspace Navigator */}
         <div>
-          <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: '#525166', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
+          <span style={{ display: 'block', fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-muted)', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '0.75rem', paddingLeft: '0.5rem' }}>
             Workspace Navigator
           </span>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
@@ -283,9 +287,9 @@ function Sidebar() {
                     padding: '0.75rem 1rem',
                     border: 'none',
                     borderRadius: '10px',
-                    background: isActive ? 'rgba(124, 106, 245, 0.12)' : 'transparent',
-                    borderLeft: isActive ? '3px solid #7c6af5' : '3px solid transparent',
-                    color: isActive ? '#7c6af5' : '#8f8eaf',
+                    background: isActive ? 'var(--bg-active)' : 'transparent',
+                    borderLeft: isActive ? '3px solid var(--accent)' : '3px solid transparent',
+                    color: isActive ? 'var(--accent)' : 'var(--text-muted)',
                     fontWeight: isActive ? 600 : 500,
                     fontSize: '0.85rem',
                     textAlign: 'left',
@@ -295,14 +299,14 @@ function Sidebar() {
                   }}
                   onMouseEnter={(e) => {
                     if (!isActive) {
-                      e.target.style.background = 'rgba(255,255,255,0.02)';
-                      e.target.style.color = '#fff';
+                      e.target.style.background = 'var(--bg-hover)';
+                      e.target.style.color = 'var(--text-white)';
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (!isActive) {
                       e.target.style.background = 'transparent';
-                      e.target.style.color = '#8f8eaf';
+                      e.target.style.color = 'var(--text-muted)';
                     }
                   }}
                 >
@@ -311,7 +315,7 @@ function Sidebar() {
                     <span>{item.name}</span>
                     {item.badge > 0 && (
                       <span style={{
-                        background: '#f87171',
+                        background: 'var(--danger)',
                         color: '#fff',
                         fontSize: '0.7rem',
                         fontWeight: 700,
@@ -329,8 +333,8 @@ function Sidebar() {
                       width: '5px',
                       height: '5px',
                       borderRadius: '50%',
-                      background: '#7c6af5',
-                      boxShadow: '0 0 8px #7c6af5'
+                      background: 'var(--accent)',
+                      boxShadow: '0 0 8px var(--accent)'
                     }} />
                   )}
                 </button>
@@ -338,13 +342,60 @@ function Sidebar() {
             })}
           </div>
         </div>
-
-
-
       </div>
 
       {/* Bottom Section */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            onClick={toggleTheme}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              padding: '0.65rem',
+              background: 'transparent',
+              border: '1px solid var(--border-card)',
+              borderRadius: '8px',
+              color: 'var(--text-white)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+          >
+            {theme === 'dark' ? '☀️ Light' : '🌙 Dark'}
+          </button>
+          <button
+            onClick={() => navigate('/edit-profile')}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.35rem',
+              padding: '0.65rem',
+              background: 'transparent',
+              border: '1px solid var(--border-card)',
+              borderRadius: '8px',
+              color: 'var(--accent)',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              outline: 'none'
+            }}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--bg-active)'; }}
+            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+          >
+            ⚙️ Profile
+          </button>
+        </div>
         <button
           onClick={handleLogout}
           style={{
@@ -355,15 +406,16 @@ function Sidebar() {
             width: '100%',
             padding: '0.65rem',
             background: 'transparent',
-            border: '1px solid #3c1e1e',
+            border: '1px solid var(--border-danger)',
             borderRadius: '8px',
-            color: '#f87171',
+            color: 'var(--danger)',
             fontSize: '0.8rem',
             fontWeight: 600,
             cursor: 'pointer',
-            transition: 'all 0.2s'
+            transition: 'all 0.2s',
+            outline: 'none'
           }}
-          onMouseEnter={(e) => { e.target.style.background = 'rgba(248,113,113,0.08)'; }}
+          onMouseEnter={(e) => { e.target.style.background = 'var(--danger-soft)'; }}
           onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
         >
           ➔ Log Out

@@ -8,6 +8,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import AiSupport from './pages/AiSupport';
 import Notifications from './pages/Notifications';
 import Leaderboards from './pages/Leaderboards';
+import EditProfile from './pages/EditProfile';
 import DashboardLayout from './components/DashboardLayout';
 import './App.css';
 
@@ -58,15 +59,17 @@ function App() {
               </DashboardLayout>
             </PrivateRoute>
           } />
+          <Route path="/edit-profile" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <EditProfile />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
           <Route path="/admin" element={
             <PrivateRoute>
               <DashboardLayout>
-                {/* Dynamically check role from local storage storage updates */}
-                {JSON.parse(localStorage.getItem('user') || '{}').role === 'admin' ? (
-                  <AdminDashboard />
-                ) : (
-                  <Navigate to="/faqs" />
-                )}
+                <AdminDashboard />
               </DashboardLayout>
             </PrivateRoute>
           } />

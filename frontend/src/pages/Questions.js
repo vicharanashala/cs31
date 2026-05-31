@@ -4,38 +4,38 @@ import { useNavigate } from 'react-router-dom';
 
 const DUPLICATE_LIMIT = 85;
 
-// --- Color tokens (AI Studio inspired dark theme matching FAQ page) ---
+// --- Color tokens (CSS Variables theme support) ---
 const C = {
   bg: 'transparent',
-  surface: '#121026',      // card / panel background
-  surface2: '#191738',     // elevated surface (hover, reply bg)
-  border: '#1f1b3c',       // borders / dividers
-  accent: '#7c6af5',       // primary accent (purple)
-  accent2: '#6366f1',      // secondary accent (blue)
-  success: '#34d399',      // solution / approved
-  warning: '#fbbf24',      // pending / unsolved
-  danger: '#f87171',       // rejected / error
-  text: '#e2e8f0',         // primary text
-  muted: '#7a7990',        // secondary text / metadata
-  muted2: '#b4b3c8',       // slightly brighter muted
+  surface: 'var(--bg-card)',      // card / panel background
+  surface2: 'var(--bg-surface2)', // elevated surface (hover, reply bg)
+  border: 'var(--border-card)',   // borders / dividers
+  accent: 'var(--accent)',        // primary accent (purple)
+  accent2: 'var(--accent2)',      // secondary accent (blue)
+  success: 'var(--success)',      // solution / approved
+  warning: 'var(--warning)',      // pending / unsolved
+  danger: 'var(--danger)',        // rejected / error
+  text: 'var(--text-main)',       // primary text
+  muted: 'var(--text-muted)',     // secondary text / metadata
+  muted2: 'var(--text-muted2)',   // slightly brighter muted
 };
 
 const getUserBadge = (user) => {
-  if (!user) return { name: 'Student', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.08)', border: 'rgba(167, 139, 250, 0.2)' };
+  if (!user) return { name: 'Student', color: 'var(--accent)', bg: 'var(--bg-active)', border: 'var(--border-card)' };
   if (user.role === 'admin') {
-    return { name: 'Admin', color: '#f87171', bg: 'rgba(248, 113, 113, 0.12)', border: 'rgba(248, 113, 113, 0.25)' };
+    return { name: 'Admin', color: 'var(--danger)', bg: 'var(--danger-soft)', border: 'var(--border-danger)' };
   }
   const pts = user.spurtiPoints !== undefined ? user.spurtiPoints : 10;
   if (pts >= 500) {
-    return { name: 'Coordinator', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)', border: 'rgba(251, 191, 36, 0.25)' };
+    return { name: 'Coordinator', color: 'var(--warning)', bg: 'var(--bg-active)', border: 'var(--warning)' };
   }
   if (pts >= 300) {
-    return { name: 'Sub-Coordinator', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.1)', border: 'rgba(56, 189, 248, 0.25)' };
+    return { name: 'Sub-Coordinator', color: 'var(--accent2)', bg: 'var(--bg-hover)', border: 'var(--accent2)' };
   }
   if (pts >= 200) {
-    return { name: 'Volunteer', color: '#c084fc', bg: 'rgba(192, 132, 252, 0.1)', border: 'rgba(192, 132, 252, 0.25)' };
+    return { name: 'Volunteer', color: 'var(--accent)', bg: 'var(--bg-active)', border: 'var(--accent)' };
   }
-  return { name: 'Student', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.08)', border: 'rgba(167, 139, 250, 0.2)' };
+  return { name: 'Student', color: 'var(--accent)', bg: 'var(--bg-active)', border: 'var(--border-card)' };
 };
 
 function Questions() {
@@ -52,6 +52,9 @@ function Questions() {
   const [showSimilar, setShowSimilar] = useState(false);
   const [similarNotice, setSimilarNotice] = useState('');
   const [pendingSimilarConfirmation, setPendingSimilarConfirmation] = useState(false);
+  const [reportingItem, setReportingItem] = useState(null);
+  const [reportReason, setReportReason] = useState('');
+  const [toast, setToast] = useState(null);
 
   const token = localStorage.getItem('token');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -189,6 +192,30 @@ function Questions() {
     }
   };
 
+  const showToast = (text, type = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
+  const submitReport = async () => {
+    if (!reportingItem) return;
+    try {
+      if (reportingItem.type === 'question') {
+        await axios.post(`/api/questions/${reportingItem.id}/report`, { reason: reportReason }, config);
+        showToast("Question reported successfully.");
+      } else {
+        await axios.post(`/api/questions/${reportingItem.qId}/replies/${reportingItem.id}/report`, { reason: reportReason }, config);
+        showToast("Reply reported successfully.");
+      }
+      setReportingItem(null);
+      setReportReason('');
+      refreshAll();
+    } catch (err) {
+      console.error("Report error:", err);
+      showToast(err.response?.data?.message || "Error submitting report.", "error");
+    }
+  };
+
   const handlePostQuestion = async (e) => {
     e.preventDefault();
     const isConfirmingSimilar = pendingSimilarConfirmation;
@@ -268,7 +295,7 @@ function Questions() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 700,
-          color: '#fff',
+          color: 'var(--text-white)',
           margin: 0,
           letterSpacing: '-0.02em'
         }}>
@@ -312,7 +339,7 @@ function Questions() {
               rows="3"
               style={{
                 width: '100%',
-                background: '#0d0c1b',
+                background: 'var(--bg-main)',
                 border: `1px solid ${C.border}`,
                 borderRadius: '10px',
                 color: C.text,
@@ -367,9 +394,9 @@ function Questions() {
                   type="submit"
                   disabled={!newQuestion.trim()}
                   style={{
-                    background: newQuestion.trim() ? (pendingSimilarConfirmation ? C.warning : C.accent) : '#1e1b38',
-                    color: newQuestion.trim() ? '#fff' : '#525166',
-                    border: 'none',
+                    background: newQuestion.trim() ? (pendingSimilarConfirmation ? C.warning : C.accent) : 'var(--bg-surface2)',
+                    color: newQuestion.trim() ? '#fff' : 'var(--text-muted)',
+                    border: `1px solid ${C.border}`,
                     borderRadius: '8px',
                     padding: '0.5rem 1.25rem',
                     fontSize: '0.82rem',
@@ -399,7 +426,7 @@ function Questions() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {similarQuestions.map((sq) => (
                   <div key={sq.id} style={{
-                    background: 'rgba(7, 7, 14, 0.4)',
+                    background: 'var(--bg-surface2)',
                     borderRadius: '8px',
                     padding: '0.85rem 1rem',
                     border: `1px solid ${C.border}`
@@ -569,7 +596,7 @@ function Questions() {
 
                   {/* Metadata line */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap', fontSize: '0.75rem', color: C.muted }}>
-                    <span style={{ fontWeight: 600, color: '#9f9eaf' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text-muted2)' }}>
                       {q.createdBy?.name || 'Unknown'}
                     </span>
                     {(() => {
@@ -598,6 +625,27 @@ function Questions() {
                     <span style={{ color: C.accent }}>
                       {q.replies?.length || 0} {q.replies?.length === 1 ? 'reply' : 'replies'}
                     </span>
+                    <span>•</span>
+                    <button
+                      onClick={() => setReportingItem({ type: 'question', id: q._id })}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: C.danger,
+                        fontSize: '0.75rem',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        padding: 0,
+                        fontWeight: 500,
+                        transition: 'opacity 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.target.style.opacity = 0.8}
+                      onMouseLeave={(e) => e.target.style.opacity = 1}
+                    >
+                      ⚠️ Report
+                    </button>
                   </div>
 
                 </div>
@@ -607,7 +655,7 @@ function Questions() {
               {q.replies && q.replies.length > 0 && (
                 <div style={{
                   borderTop: `1px solid ${C.border}`,
-                  background: 'rgba(7, 6, 14, 0.4)',
+                  background: 'var(--bg-main)',
                   padding: '1.25rem 1.5rem 1.25rem calc(1.5rem + 36px + 1.25rem)',
                   display: 'flex',
                   flexDirection: 'column',
@@ -655,7 +703,7 @@ function Questions() {
 
                       {/* Reply Metadata & Votes */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: C.muted }}>
-                        <span style={{ fontWeight: 600, color: '#9f9eaf' }}>by {reply.createdBy?.name || 'Unknown'}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--text-muted2)' }}>by {reply.createdBy?.name || 'Unknown'}</span>
                         {(() => {
                           const b = getUserBadge(reply.createdBy);
                           return (
@@ -717,6 +765,27 @@ function Questions() {
                         >
                           ▼ {reply.downvoteCount || 0}
                         </button>
+                        
+                        <button
+                          onClick={() => setReportingItem({ type: 'reply', id: reply._id, qId: q._id })}
+                          style={{
+                            background: 'transparent',
+                            border: `1px solid ${C.border}`,
+                            color: C.danger,
+                            borderRadius: '5px',
+                            padding: '2px 8px',
+                            fontSize: '0.7rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => { e.target.style.borderColor = C.danger; }}
+                          onMouseLeave={(e) => { e.target.style.borderColor = C.border; }}
+                        >
+                          ⚠️ Report
+                        </button>
 
                         {/* Mark Solution Action */}
                         {canMarkSolution(q) && !reply.isSolution && !q.replies.some(r => r.isSolution) && (
@@ -774,7 +843,7 @@ function Questions() {
                 padding: '0.85rem 1.5rem',
                 display: 'flex',
                 gap: '0.75rem',
-                background: 'rgba(7, 6, 14, 0.2)'
+                background: 'var(--bg-surface2)'
               }}>
                 {showReply[q._id] ? (
                   <>
@@ -785,7 +854,7 @@ function Questions() {
                       placeholder="Type your reply to this question..."
                       style={{
                         flex: 1,
-                        background: '#0d0c1b',
+                        background: 'var(--bg-main)',
                         border: `1px solid ${C.border}`,
                         borderRadius: '8px',
                         color: C.text,
@@ -802,9 +871,9 @@ function Questions() {
                       onClick={() => handleReply(q._id)}
                       disabled={!(replyTexts[q._id] || '').trim()}
                       style={{
-                        background: (replyTexts[q._id] || '').trim() ? C.accent : '#1e1b38',
-                        color: (replyTexts[q._id] || '').trim() ? '#fff' : '#525166',
-                        border: 'none',
+                        background: (replyTexts[q._id] || '').trim() ? C.accent : 'var(--bg-surface2)',
+                        color: (replyTexts[q._id] || '').trim() ? '#fff' : 'var(--text-muted)',
+                        border: `1px solid ${C.border}`,
                         borderRadius: '8px',
                         padding: '0.5rem 1rem',
                         fontSize: '0.82rem',
@@ -857,6 +926,135 @@ function Questions() {
         </div>
 
       </div>
+
+      {/* Decent Modal for entering report reason */}
+      {reportingItem && (
+        <div style={{
+          position: 'fixed',
+          top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(7, 7, 14, 0.75)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1.5rem',
+          boxSizing: 'border-box'
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            borderRadius: '16px',
+            padding: '1.75rem',
+            maxWidth: '450px',
+            width: '100%',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 10px 10px -5px rgba(0, 0, 0, 0.4)',
+            boxSizing: 'border-box'
+          }}>
+            <h3 style={{
+              margin: '0 0 0.5rem 0',
+              fontSize: '1.15rem',
+              fontWeight: 700,
+              color: 'var(--text-white)'
+            }}>
+              ⚠️ Report Content
+            </h3>
+            <p style={{
+              margin: '0 0 1.25rem 0',
+              fontSize: '0.82rem',
+              color: 'var(--text-muted2)',
+              lineHeight: 1.4
+            }}>
+              You are reporting this {reportingItem.type}. Please provide an optional reason below to help our moderation team understand the issue.
+            </p>
+
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              placeholder="Reason for reporting (optional)..."
+              rows="4"
+              style={{
+                width: '100%',
+                background: 'var(--bg-main)',
+                border: '1px solid var(--border-card)',
+                borderRadius: '10px',
+                color: 'var(--text-main)',
+                padding: '0.75rem 1rem',
+                fontSize: '0.88rem',
+                resize: 'none',
+                fontFamily: 'inherit',
+                outline: 'none',
+                boxSizing: 'border-box',
+                marginBottom: '1.25rem',
+                transition: 'border-color 0.2s'
+              }}
+              onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+              onBlur={(e) => e.target.style.borderColor = 'var(--border-card)'}
+            />
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setReportingItem(null);
+                  setReportReason('');
+                }}
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--border-card)',
+                  color: 'var(--text-muted2)',
+                  borderRadius: '8px',
+                  padding: '0.5rem 1.25rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={submitReport}
+                style={{
+                  background: 'var(--danger)',
+                  border: 'none',
+                  color: '#fff',
+                  borderRadius: '8px',
+                  padding: '0.5rem 1.25rem',
+                  fontSize: '0.82rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'opacity 0.2s'
+                }}
+              >
+                Submit Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Decent Custom Toast message */}
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          background: toast.type === 'error' ? 'var(--danger-soft)' : 'rgba(5, 150, 105, 0.9)',
+          border: `1px solid ${toast.type === 'error' ? 'var(--border-danger)' : 'rgba(52, 211, 153, 0.3)'}`,
+          color: toast.type === 'error' ? 'var(--danger)' : '#fff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '10px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+          zIndex: 1100,
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          pointerEvents: 'none'
+        }}>
+          {toast.text}
+        </div>
+      )}
     </div>
   );
 }
@@ -865,8 +1063,8 @@ function Questions() {
 
 function FilterPill({ active, onClick, children, accent }) {
   const borderCol = active ? (accent || C.accent) : C.border;
-  const bgCol = active ? `rgba(124, 106, 245, 0.15)` : '#0d0c1b';
-  const textCol = active ? (accent || '#a78bfa') : '#8f8eaf';
+  const bgCol = active ? 'var(--bg-active)' : 'var(--bg-surface2)';
+  const textCol = active ? (accent || 'var(--accent)') : 'var(--text-muted)';
 
   return (
     <button
@@ -896,8 +1094,9 @@ function FilterPill({ active, onClick, children, accent }) {
 function Badge({ children }) {
   return (
     <span style={{
-      background: 'rgba(255,255,255,0.08)',
-      color: '#8f8eaf',
+      background: 'var(--bg-main)',
+      color: 'var(--text-muted2)',
+      border: '1px solid var(--border-card)',
       borderRadius: '10px',
       padding: '0 6px',
       fontSize: '0.7rem',

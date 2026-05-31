@@ -4,10 +4,62 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg-main: #07070c;
+  --bg-sidebar: #0d0c18;
+  --bg-card: #121026;
+  --bg-surface2: #191738;
+  --border-card: #1f1b3c;
+  --border-sidebar: #1e1b38;
+  --border-divider: #2e2e4a;
+  --accent: #7c6af5;
+  --accent-hover: #6b59e0;
+  --accent2: #06b6d4;
+  --text-main: #e2e8f0;
+  --text-muted: #7a7990;
+  --text-muted2: #b4b3c8;
+  --text-white: #ffffff;
+  --bg-active: rgba(124, 106, 245, 0.12);
+  --bg-hover: rgba(255, 255, 255, 0.02);
+  --success: #34d399;
+  --warning: #fbbf24;
+  --danger: #f87171;
+  --border-danger: #3c1e1e;
+  --danger-soft: rgba(248, 113, 113, 0.08);
+}
+
+[data-theme='light'] {
+  --bg-main: #f3f4f6;
+  --bg-sidebar: #ffffff;
+  --bg-card: #ffffff;
+  --bg-surface2: #f8fafc;
+  --border-card: #d1d5db;
+  --border-sidebar: #e5e7eb;
+  --border-divider: #e5e7eb;
+  --accent: #4f46e5;
+  --accent-hover: #4338ca;
+  --accent2: #0891b2;
+  --text-main: #1f2937;
+  --text-muted: #6b7280;
+  --text-muted2: #4b5563;
+  --text-white: #111827;
+  --bg-active: rgba(79, 70, 229, 0.08);
+  --bg-hover: rgba(31, 41, 55, 0.04);
+  --success: #059669;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --border-danger: #fee2e2;
+  --danger-soft: rgba(220, 38, 38, 0.05);
+}
+
+body, .app, .sidebar, .card, button, input, textarea {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: #0f0f1a;
-  color: #e2e8f0;
+  background: var(--bg-main);
+  color: var(--text-main);
 }
 
 .app {
@@ -49,14 +101,15 @@ body {
 }
 
 .card {
-  background: #1a1a2e;
+  background: var(--bg-card);
   border-radius: 12px;
   padding: 2.5rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+  border: 1px solid var(--border-card);
 }
 
 h2 {
-  color: #e2e8f0;
+  color: var(--text-white);
   margin-bottom: 1.5rem;
   font-size: 1.8rem;
 }
@@ -76,19 +129,19 @@ h2 {
 .form-group textarea {
   width: 100%;
   padding: 0.75rem;
-  border: 2px solid #2e2e4a;
+  border: 2px solid var(--border-card);
   border-radius: 8px;
   font-size: 1rem;
   font-family: inherit;
-  background: #0f0f1a;
-  color: #e2e8f0;
+  background: var(--bg-main);
+  color: var(--text-main);
   transition: border-color 0.3s;
 }
 
 .form-group input:focus,
 .form-group textarea:focus {
   outline: none;
-  border-color: #7c6af5;
+  border-color: var(--accent);
 }
 
 textarea {
@@ -107,26 +160,26 @@ textarea {
 }
 
 .btn-primary {
-  background: #7c6af5;
+  background: var(--accent);
   color: #fff;
   width: 100%;
 }
 
 .btn-primary:hover {
-  background: #6b59e0;
+  background: var(--accent-hover);
   transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: #1a1a2e;
-  color: #9ca3af;
-  border: 1px solid #2e2e4a;
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-card);
   margin-right: 0.5rem;
 }
 
 .btn-secondary:hover {
-  background: #23233a;
-  color: #e2e8f0;
+  background: var(--bg-surface2);
+  color: var(--text-main);
 }
 
 .btn-sm {
@@ -152,9 +205,9 @@ textarea {
 }
 
 .alert-error {
-  background: #fee;
-  color: #c0392b;
-  border: 1px solid #f5c6c6;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .alert-success {
@@ -177,21 +230,21 @@ textarea {
 }
 
 .faq-item {
-  background: #1a1a2e;
-  border: 1px solid #2e2e4a;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 1.5rem;
   margin-bottom: 1rem;
 }
 
 .faq-item h3 {
-  color: #e2e8f0;
+  color: var(--text-white);
   margin-bottom: 0.5rem;
   font-size: 1.1rem;
 }
 
 .faq-item p {
-  color: #9ca3af;
+  color: var(--text-muted);
   line-height: 1.6;
 }
 
@@ -202,8 +255,8 @@ textarea {
 }
 
 .faq-form {
-  background: #1a1a2e;
-  border: 1px solid #2e2e4a;
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
   border-radius: 10px;
   padding: 1.5rem;
   margin-bottom: 2rem;
@@ -211,7 +264,7 @@ textarea {
 
 .faq-form h3 {
   margin-bottom: 1rem;
-  color: #1a1a2e;
+  color: var(--text-white);
 }
 
 .faq-form .form-row {

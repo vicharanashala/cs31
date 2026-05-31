@@ -179,4 +179,65 @@ router.get('/leaderboard/admins', auth, async (req, res) => {
   }
 });
 
+// Update user profile (protected)
+router.put('/profile', auth, async (req, res) => {
+  const { name, oldPassword, newPassword, confirmNewPassword } = req.body;
+
+  try {
+    // 1. Find user in Admin first, then User (student)
+    let user = await Admin.findById(req.user.id);
+    let isStudent = false;
+    if (!user) {
+      user = await User.findById(req.user.id);
+      isStudent = true;
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // 2. Validate password change if any password field is provided
+    if (oldPassword || newPassword || confirmNewPassword) {
+      if (!oldPassword || !newPassword || !confirmNewPassword) {
+        return res.status(400).json({ message: 'Old password, new password, and confirmation are all required to change password' });
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        return res.status(400).json({ message: 'New password and confirmation do not match' });
+      }
+
+      // Check if old password is correct
+      const isMatch = await bcrypt.compare(oldPassword, user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Incorrect old password' });
+      }
+
+      // Hash new password
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(newPassword, salt);
+    }
+
+    // 3. Update name if provided
+    if (name) {
+      user.name = name.trim();
+    }
+
+    await user.save();
+
+    res.json({
+      message: 'Profile updated successfully',
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: isStudent ? (user.role || 'student') : 'admin',
+        spurtiPoints: user.spurtiPoints
+      }
+    });
+  } catch (err) {
+    console.error('Update Profile Error:', err);
+    res.status(500).json({ message: 'Server error updating profile' });
+  }
+});
+
 module.exports = router;

@@ -609,6 +609,217 @@ router.delete('/:id', auth, async (req, res) => {
   }
 });
 
+// GET all reported questions and replies (Admin only)
+router.get('/reported', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    // Find all questions with reports or containing replies with reports
+    const questions = await Question.find({
+      $or: [
+        { "reports.0": { $exists: true } },
+        { "replies.reports.0": { $exists: true } }
+      ]
+    })
+    .populate('createdBy', 'name email')
+    .populate('reports.reportedBy', 'name email')
+    .populate('replies.createdBy', 'name email')
+    .populate('replies.reports.reportedBy', 'name email');
+
+    const reportedItems = [];
+
+    questions.forEach(q => {
+      // If the question itself is reported
+      if (q.reports && q.reports.length > 0) {
+        reportedItems.push({
+          id: q._id,
+          type: 'question',
+          text: q.question,
+          createdBy: q.createdBy,
+          reports: q.reports.map(r => ({
+            reportedBy: r.reportedBy ? r.reportedBy._id : null,
+            reportedByModel: r.reportedByModel,
+            reason: r.reason,
+            createdAt: r.createdAt,
+            email: r.reportedBy ? r.reportedBy.email : 'Unknown'
+          })),
+          createdAt: q.createdAt
+        });
+      }
+
+      // Check replies
+      q.replies.forEach(reply => {
+        if (reply.reports && reply.reports.length > 0) {
+          reportedItems.push({
+            id: reply._id,
+            questionId: q._id,
+            type: 'reply',
+            text: reply.text,
+            createdBy: reply.createdBy,
+            reports: reply.reports.map(r => ({
+              reportedBy: r.reportedBy ? r.reportedBy._id : null,
+              reportedByModel: r.reportedByModel,
+              reason: r.reason,
+              createdAt: r.createdAt,
+              email: r.reportedBy ? r.reportedBy.email : 'Unknown'
+            })),
+            createdAt: reply.createdAt
+          });
+        }
+      });
+    });
+
+    reportedItems.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    res.json(reportedItems);
+  } catch (err) {
+    console.error('Fetch Reported Items Error:', err);
+    res.status(500).json({ message: 'Error fetching reported items' });
+  }
+});
+
+// POST report a question
+router.post('/:id/report', auth, async (req, res) => {
+  const { reason } = req.body;
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const alreadyReported = question.reports.some(
+      r => r.reportedBy && r.reportedBy.toString() === req.user.id
+    );
+    if (alreadyReported) {
+      return res.status(400).json({ message: 'You have already reported this question' });
+    }
+
+    question.reports.push({
+      reportedBy: req.user.id,
+      reportedByModel: req.user.role === 'admin' ? 'Admin' : 'User',
+      reason: reason || ''
+    });
+
+    await question.save();
+    res.json({ message: 'Question reported successfully', reportsCount: question.reports.length });
+  } catch (err) {
+    console.error('Report Question Error:', err);
+    res.status(500).json({ message: 'Error reporting question' });
+  }
+});
+
+// POST report a reply
+router.post('/:id/replies/:replyId/report', auth, async (req, res) => {
+  const { reason } = req.body;
+  try {
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    const alreadyReported = reply.reports.some(
+      r => r.reportedBy && r.reportedBy.toString() === req.user.id
+    );
+    if (alreadyReported) {
+      return res.status(400).json({ message: 'You have already reported this reply' });
+    }
+
+    reply.reports.push({
+      reportedBy: req.user.id,
+      reportedByModel: req.user.role === 'admin' ? 'Admin' : 'User',
+      reason: reason || ''
+    });
+
+    await question.save();
+    res.json({ message: 'Reply reported successfully', reportsCount: reply.reports.length });
+  } catch (err) {
+    console.error('Report Reply Error:', err);
+    res.status(500).json({ message: 'Error reporting reply' });
+  }
+});
+
+// POST dismiss reports of a question (Admin only)
+router.post('/:id/dismiss-reports', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    question.reports = [];
+    await question.save();
+
+    res.json({ message: 'Question reports dismissed successfully' });
+  } catch (err) {
+    console.error('Dismiss Question Reports Error:', err);
+    res.status(500).json({ message: 'Error dismissing question reports' });
+  }
+});
+
+// POST dismiss reports of a reply (Admin only)
+router.post('/:id/replies/:replyId/dismiss-reports', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    reply.reports = [];
+    await question.save();
+
+    res.json({ message: 'Reply reports dismissed successfully' });
+  } catch (err) {
+    console.error('Dismiss Reply Reports Error:', err);
+    res.status(500).json({ message: 'Error dismissing reply reports' });
+  }
+});
+
+// DELETE a reply (Admin only)
+router.delete('/:id/replies/:replyId', auth, async (req, res) => {
+  try {
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    question.replies.pull(req.params.replyId);
+    await question.save();
+
+    res.json({ message: 'Reply deleted successfully' });
+  } catch (err) {
+    console.error('Delete Reply Error:', err);
+    res.status(500).json({ message: 'Error deleting reply' });
+  }
+});
+
 router.post('/check-similarity', auth, async (req, res) => {
   const { question } = req.body;
   

@@ -1,23 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import Leaderboard from '../components/Leaderboard';
 
 const C = {
   bg: 'transparent',
-  surface: '#121026',      // card / panel background
-  surface2: '#191738',     // elevated surface (hover, reply bg)
-  border: '#1f1b3c',       // borders / dividers
-  accent: '#7c6af5',       // primary accent (purple)
-  accent2: '#06b6d4',      // secondary accent (cyan)
-  success: '#34d399',      // solution / approved
-  warning: '#fbbf24',      // pending / unsolved
-  danger: '#f87171',       // rejected / error
-  text: '#e2e8f0',         // primary text
-  muted: '#7a7990',        // secondary text / metadata
-  muted2: '#b4b3c8',       // slightly brighter muted
+  surface: 'var(--bg-card)',      // card / panel background
+  surface2: 'var(--bg-surface2)',     // elevated surface (hover, reply bg)
+  border: 'var(--border-card)',       // borders / dividers
+  accent: 'var(--accent)',       // primary accent (purple)
+  accent2: 'var(--accent2)',      // secondary accent (cyan)
+  success: 'var(--success)',      // solution / approved
+  warning: 'var(--warning)',      // pending / unsolved
+  danger: 'var(--danger)',       // rejected / error
+  text: 'var(--text-main)',         // primary text
+  muted: 'var(--text-muted)',        // secondary text / metadata
+  muted2: 'var(--text-muted2)',       // slightly brighter muted
 };
 
 function AdminDashboard() {
+  const navigate = useNavigate();
   const [faqRequests, setFaqRequests] = useState([]);
   const [pendingQuestions, setPendingQuestions] = useState([]);
   const [approvedQuestions, setApprovedQuestions] = useState([]);
@@ -32,6 +34,7 @@ function AdminDashboard() {
   
   const [studentsLeaderboard, setStudentsLeaderboard] = useState([]);
   const [adminsLeaderboard, setAdminsLeaderboard] = useState([]);
+  const [reportedItems, setReportedItems] = useState([]);
   
   const [message, setMessage] = useState('');
   const [activeTab, setActiveTab] = useState('faqRequests');
@@ -100,6 +103,15 @@ function AdminDashboard() {
     }
   };
 
+  const fetchReportedItems = async () => {
+    try {
+      const res = await axios.get('/api/questions/reported', config);
+      setReportedItems(res.data);
+    } catch (err) {
+      console.error('Error fetching reported items:', err);
+    }
+  };
+
   const refreshAll = () => {
     fetchFAQRequests();
     fetchPendingQuestions();
@@ -107,11 +119,17 @@ function AdminDashboard() {
     fetchSections();
     fetchAllQuestions();
     fetchLeaderboards();
+    fetchReportedItems();
   };
 
   useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user.role !== 'admin') {
+      navigate('/faqs');
+      return;
+    }
     refreshAll();
-  }, []);
+  }, [navigate]);
 
   const handleApprove = async (questionId) => {
     const ans = answer[questionId];
@@ -195,6 +213,45 @@ function AdminDashboard() {
     }
   };
 
+  const handleDismissReport = async (item) => {
+    try {
+      if (item.type === 'question') {
+        await axios.post(`/api/questions/${item.id}/dismiss-reports`, {}, config);
+      } else {
+        await axios.post(`/api/questions/${item.questionId}/replies/${item.id}/dismiss-reports`, {}, config);
+      }
+      setMessage('Reports dismissed successfully');
+      refreshAll();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Error dismissing reports:', err);
+      setMessage(err.response?.data?.message || 'Error dismissing reports');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
+  const handleDeleteReportedItem = async (item) => {
+    const confirmMsg = item.type === 'question' 
+      ? 'Are you sure you want to permanently delete this reported question?'
+      : 'Are you sure you want to permanently delete this reported reply?';
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      if (item.type === 'question') {
+        await axios.delete(`/api/questions/${item.id}`, config);
+      } else {
+        await axios.delete(`/api/questions/${item.questionId}/replies/${item.id}`, config);
+      }
+      setMessage('Reported item deleted successfully');
+      refreshAll();
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      console.error('Error deleting reported item:', err);
+      setMessage(err.response?.data?.message || 'Error deleting reported item');
+      setTimeout(() => setMessage(''), 3000);
+    }
+  };
+
   // Helper to pre-populate form with highest upvoted reply if any
   const prefillFromSolution = (question) => {
     if (!question.replies || question.replies.length === 0) return;
@@ -248,7 +305,7 @@ function AdminDashboard() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 700,
-          color: '#fff',
+          color: 'var(--text-white)',
           margin: 0,
           letterSpacing: '-0.02em'
         }}>
@@ -260,9 +317,9 @@ function AdminDashboard() {
             style={{
               padding: '0.5rem 1.1rem',
               borderRadius: '20px',
-              border: activeTab === 'faqRequests' ? `1px solid ${C.accent}` : '1px solid #1f1b3c',
-              background: activeTab === 'faqRequests' ? 'rgba(124, 106, 245, 0.15)' : '#0d0c1b',
-              color: activeTab === 'faqRequests' ? '#a78bfa' : '#8f8eaf',
+              border: activeTab === 'faqRequests' ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+              background: activeTab === 'faqRequests' ? 'var(--bg-active)' : 'var(--bg-surface2)',
+              color: activeTab === 'faqRequests' ? 'var(--accent)' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -277,9 +334,9 @@ function AdminDashboard() {
             style={{
               padding: '0.5rem 1.1rem',
               borderRadius: '20px',
-              border: activeTab === 'pending' ? `1px solid ${C.accent}` : '1px solid #1f1b3c',
-              background: activeTab === 'pending' ? 'rgba(124, 106, 245, 0.15)' : '#0d0c1b',
-              color: activeTab === 'pending' ? '#a78bfa' : '#8f8eaf',
+              border: activeTab === 'pending' ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+              background: activeTab === 'pending' ? 'var(--bg-active)' : 'var(--bg-surface2)',
+              color: activeTab === 'pending' ? 'var(--accent)' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -294,9 +351,9 @@ function AdminDashboard() {
             style={{
               padding: '0.5rem 1.1rem',
               borderRadius: '20px',
-              border: activeTab === 'approved' ? `1px solid ${C.accent}` : '1px solid #1f1b3c',
-              background: activeTab === 'approved' ? 'rgba(124, 106, 245, 0.15)' : '#0d0c1b',
-              color: activeTab === 'approved' ? '#a78bfa' : '#8f8eaf',
+              border: activeTab === 'approved' ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
+              background: activeTab === 'approved' ? 'var(--bg-active)' : 'var(--bg-surface2)',
+              color: activeTab === 'approved' ? 'var(--accent)' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -340,7 +397,7 @@ function AdminDashboard() {
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               FAQ Promote Requests
             </span>
-            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>
+            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-white)' }}>
               {faqRequests.length}
             </h2>
           </div>
@@ -371,7 +428,7 @@ function AdminDashboard() {
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Awaiting Community Review
             </span>
-            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>
+            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-white)' }}>
               {pendingQuestions.length}
             </h2>
           </div>
@@ -402,7 +459,7 @@ function AdminDashboard() {
             <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
               Published FAQ Index
             </span>
-            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: '#fff' }}>
+            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-white)' }}>
               {approvedQuestions.length}
             </h2>
           </div>
@@ -439,7 +496,7 @@ function AdminDashboard() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <span style={{ fontSize: '1.2rem' }}>📊</span>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#fff' }}>
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-white)' }}>
                 Most Trending Student Questions
               </h2>
             </div>
@@ -453,17 +510,17 @@ function AdminDashboard() {
                     style={{
                       padding: '0.65rem 0.85rem',
                       borderRadius: '10px',
-                      background: 'rgba(255,255,255,0.01)',
-                      border: '1px solid rgba(255,255,255,0.02)',
+                      background: 'var(--bg-surface2)',
+                      border: '1px solid var(--border-card)',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                      e.currentTarget.style.borderColor = 'rgba(124, 106, 245, 0.2)';
+                      e.currentTarget.style.background = 'var(--bg-hover)';
+                      e.currentTarget.style.borderColor = 'var(--accent)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.01)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.02)';
+                      e.currentTarget.style.background = 'var(--bg-surface2)';
+                      e.currentTarget.style.borderColor = 'var(--border-card)';
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', gap: '1rem' }}>
@@ -474,7 +531,7 @@ function AdminDashboard() {
                         <span style={{
                           fontSize: '0.8rem',
                           fontWeight: 500,
-                          color: '#e2e8f0',
+                          color: 'var(--text-main)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
@@ -484,7 +541,7 @@ function AdminDashboard() {
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', flexShrink: 0 }}>
                         <span style={{ fontSize: '0.72rem', color: C.success }}>▲</span>
-                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#fff' }}>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-white)' }}>
                           {q.upvoteCount}
                         </span>
                       </div>
@@ -494,7 +551,7 @@ function AdminDashboard() {
                     <div style={{
                       width: '100%',
                       height: '6px',
-                      background: '#0d0c1b',
+                      background: 'var(--bg-main)',
                       borderRadius: '3px',
                       overflow: 'hidden'
                     }}>
@@ -536,7 +593,7 @@ function AdminDashboard() {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
               <span style={{ fontSize: '1.2rem' }}>📁</span>
-              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: '#fff' }}>
+              <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-white)' }}>
                 FAQ Category Distribution
               </h2>
             </div>
@@ -550,17 +607,17 @@ function AdminDashboard() {
                     style={{
                       padding: '0.65rem 0.85rem',
                       borderRadius: '10px',
-                      background: 'rgba(255,255,255,0.01)',
-                      border: '1px solid rgba(255,255,255,0.02)',
+                      background: 'var(--bg-surface2)',
+                      border: '1px solid var(--border-card)',
                       transition: 'all 0.2s',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                      e.currentTarget.style.borderColor = 'rgba(6, 182, 212, 0.2)';
+                      e.currentTarget.style.background = 'var(--bg-hover)';
+                      e.currentTarget.style.borderColor = 'var(--accent2)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.01)';
-                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.02)';
+                      e.currentTarget.style.background = 'var(--bg-surface2)';
+                      e.currentTarget.style.borderColor = 'var(--border-card)';
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem', gap: '1rem' }}>
@@ -571,7 +628,7 @@ function AdminDashboard() {
                         <span style={{
                           fontSize: '0.8rem',
                           fontWeight: 500,
-                          color: '#e2e8f0',
+                          color: 'var(--text-main)',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
@@ -590,7 +647,7 @@ function AdminDashboard() {
                     <div style={{
                       width: '100%',
                       height: '6px',
-                      background: '#0d0c1b',
+                      background: 'var(--bg-main)',
                       borderRadius: '3px',
                       overflow: 'hidden'
                     }}>
@@ -613,9 +670,9 @@ function AdminDashboard() {
 
       {message && (
         <div style={{
-          background: message.includes('Error') || message.includes('reject') || message.includes('denied') ? '#3c1e1e' : 'rgba(52, 211, 153, 0.08)',
-          border: `1px solid ${message.includes('Error') || message.includes('reject') || message.includes('denied') ? '#7c1f1f' : 'rgba(52, 211, 153, 0.25)'}`,
-          color: message.includes('Error') || message.includes('reject') || message.includes('denied') ? '#f87171' : '#34d399',
+          background: message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--danger-soft)' : 'rgba(5, 150, 105, 0.08)',
+          border: `1px solid ${message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--border-danger)' : 'rgba(52, 211, 153, 0.25)'}`,
+          color: message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--danger)' : 'var(--success)',
           padding: '0.75rem 1.25rem',
           borderRadius: '10px',
           marginBottom: '1.5rem',
@@ -682,7 +739,7 @@ function AdminDashboard() {
                   </div>
 
                   {/* Question */}
-                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
+                  <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-white)', lineHeight: 1.4 }}>
                     {q.question}
                   </h3>
 
@@ -753,7 +810,7 @@ function AdminDashboard() {
                             onChange={(e) => setEditedQuestion(prev => ({ ...prev, [q._id]: e.target.value }))}
                             style={{
                               width: '100%',
-                              background: '#0d0c1b',
+                              background: 'var(--bg-main)',
                               border: `1px solid ${C.border}`,
                               borderRadius: '8px',
                               color: C.text,
@@ -777,7 +834,7 @@ function AdminDashboard() {
                               onChange={(e) => setSection(prev => ({ ...prev, [q._id]: e.target.value }))}
                               style={{
                                 flex: 1,
-                                background: '#0d0c1b',
+                                background: 'var(--bg-main)',
                                 border: `1px solid ${C.border}`,
                                 borderRadius: '8px',
                                 color: C.text,
@@ -798,7 +855,7 @@ function AdminDashboard() {
                               placeholder="Or write custom category..."
                               style={{
                                 flex: 1,
-                                background: '#0d0c1b',
+                                background: 'var(--bg-main)',
                                 border: `1px solid ${C.border}`,
                                 borderRadius: '8px',
                                 color: C.text,
@@ -822,7 +879,7 @@ function AdminDashboard() {
                             rows="4"
                             style={{
                               width: '100%',
-                              background: '#0d0c1b',
+                              background: 'var(--bg-main)',
                               border: `1px solid ${C.border}`,
                               borderRadius: '8px',
                               color: C.text,
@@ -1002,9 +1059,9 @@ function AdminDashboard() {
                         onClick={() => handleApprove(q._id)}
                         disabled={!(answer[q._id] || '').trim()}
                         style={{
-                          background: (answer[q._id] || '').trim() ? C.accent : '#1e1b38',
-                          color: (answer[q._id] || '').trim() ? '#fff' : '#525166',
-                          border: 'none',
+                          background: (answer[q._id] || '').trim() ? C.accent : 'var(--bg-surface2)',
+                          color: (answer[q._id] || '').trim() ? '#fff' : 'var(--text-muted)',
+                          border: `1px solid ${C.border}`,
                           borderRadius: '8px',
                           padding: '0.45rem 1.25rem',
                           fontSize: '0.8rem',
@@ -1087,10 +1144,10 @@ function AdminDashboard() {
                     </span>
                   </div>
 
-                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 600, color: '#fff', lineHeight: 1.4 }}>
+                  <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-white)', lineHeight: 1.4 }}>
                     {faq.question}
                   </h3>
-                  <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.9rem', color: '#b4b3c8', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                  <p style={{ margin: '0 0 1.25rem 0', fontSize: '0.9rem', color: 'var(--text-muted2)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
                     {faq.answer}
                   </p>
 
@@ -1122,10 +1179,167 @@ function AdminDashboard() {
 
         </div>
 
-        {/* Right Column: Leaderboards */}
+        {/* Right Column: Leaderboards or Reports */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '1.5rem' }}>
-          <Leaderboard title="Student Leaderboard" data={studentsLeaderboard} type="students" />
-          <Leaderboard title="Admin Leaderboard" data={adminsLeaderboard} type="admins" />
+          {activeTab === 'faqRequests' ? (
+            <div style={{
+              background: C.surface,
+              border: `1px solid ${C.border}`,
+              borderRadius: '16px',
+              padding: '1.5rem',
+              boxSizing: 'border-box'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+                <h2 style={{ fontSize: '1.05rem', fontWeight: 700, margin: 0, color: 'var(--text-white)' }}>
+                  Reports Received
+                </h2>
+                <span style={{
+                  background: C.danger,
+                  color: '#fff',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
+                  padding: '1px 6px',
+                  borderRadius: '10px',
+                  marginLeft: 'auto'
+                }}>
+                  {reportedItems.length}
+                </span>
+              </div>
+
+              {reportedItems.length === 0 ? (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '2rem 1rem',
+                  color: C.muted,
+                  fontSize: '0.85rem'
+                }}>
+                  No active reports to review. 🎉
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '550px', overflowY: 'auto' }}>
+                  {reportedItems.map((item) => (
+                    <div key={item.id} style={{
+                      padding: '0.85rem',
+                      borderRadius: '10px',
+                      background: 'var(--bg-surface2)',
+                      border: `1px solid ${C.border}`,
+                      fontSize: '0.8rem'
+                    }}>
+                      {/* Header: Type and Time */}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                        <span style={{
+                          fontSize: '0.65rem',
+                          fontWeight: 800,
+                          textTransform: 'uppercase',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: '4px',
+                          background: item.type === 'question' ? 'rgba(99, 102, 241, 0.15)' : 'rgba(168, 85, 247, 0.15)',
+                          color: item.type === 'question' ? C.accent2 : '#c084fc'
+                        }}>
+                          {item.type}
+                        </span>
+                        <span style={{ fontSize: '0.65rem', color: C.muted }}>
+                          {new Date(item.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
+
+                      {/* Text content */}
+                      <p style={{
+                        margin: '0 0 0.75rem 0',
+                        color: C.text,
+                        fontStyle: 'italic',
+                        lineHeight: 1.4,
+                        wordBreak: 'break-word',
+                        background: 'var(--bg-main)',
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        borderLeft: `3px solid ${C.danger}`
+                      }}>
+                        "{item.text}"
+                      </p>
+
+                      {/* Reporter details */}
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <span style={{ fontSize: '0.68rem', fontWeight: 700, color: C.muted2, display: 'block', marginBottom: '0.3rem' }}>
+                          Reports ({item.reports.length}):
+                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          {item.reports.map((rep, idx) => (
+                            <div key={idx} style={{
+                              background: 'var(--bg-main)',
+                              padding: '0.4rem 0.6rem',
+                              borderRadius: '6px',
+                              border: `1px solid ${C.border}`,
+                              fontSize: '0.72rem'
+                            }}>
+                              <span style={{ fontWeight: 600, color: 'var(--text-white)', display: 'block', marginBottom: '2px' }}>
+                                👤 {rep.email}
+                              </span>
+                              {rep.reason ? (
+                                <span style={{ color: C.muted, fontStyle: 'italic' }}>
+                                  "{rep.reason}"
+                                </span>
+                              ) : (
+                                <span style={{ color: 'var(--text-muted2)', fontSize: '0.65rem' }}>
+                                  No reason provided
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Actions */}
+                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', borderTop: `1px solid ${C.border}`, paddingTop: '0.5rem' }}>
+                        <button
+                          onClick={() => handleDismissReport(item)}
+                          style={{
+                            background: 'transparent',
+                            border: `1px solid ${C.border}`,
+                            color: C.text,
+                            borderRadius: '6px',
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.borderColor = C.accent}
+                          onMouseLeave={(e) => e.target.style.borderColor = C.border}
+                        >
+                          Dismiss
+                        </button>
+                        <button
+                          onClick={() => handleDeleteReportedItem(item)}
+                          style={{
+                            background: C.danger,
+                            border: 'none',
+                            color: '#fff',
+                            borderRadius: '6px',
+                            padding: '0.25rem 0.6rem',
+                            fontSize: '0.72rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.opacity = 0.9}
+                          onMouseLeave={(e) => e.target.style.opacity = 1}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              <Leaderboard title="Student Leaderboard" data={studentsLeaderboard} type="students" />
+              <Leaderboard title="Admin Leaderboard" data={adminsLeaderboard} type="admins" />
+            </>
+          )}
         </div>
 
       </div>

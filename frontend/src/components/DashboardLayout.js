@@ -6,8 +6,8 @@ function DashboardLayout({ children }) {
     <div style={{
       display: 'flex',
       minHeight: '100vh',
-      background: '#07070c',
-      color: '#e2e8f0',
+      background: 'var(--bg-main)',
+      color: 'var(--text-main)',
       fontFamily: "'Inter', 'Segoe UI', sans-serif",
       overflow: 'hidden'
     }}>

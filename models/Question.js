@@ -41,7 +41,21 @@ const ReplySchema = new mongoose.Schema({
     enum: ['User', 'Admin'],
     default: 'User'
   },
-  createdAt: { type: Date, default: Date.now }
+  createdAt: { type: Date, default: Date.now },
+  reports: [{
+    reportedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'replies.reports.reportedByModel',
+      required: true
+    },
+    reportedByModel: {
+      type: String,
+      enum: ['User', 'Admin'],
+      required: true
+    },
+    reason: { type: String, trim: true },
+    createdAt: { type: Date, default: Date.now }
+  }]
 });
 
 const QuestionSchema = new mongoose.Schema({
@@ -102,7 +116,21 @@ const QuestionSchema = new mongoose.Schema({
     type: String,
     enum: ['User', 'Admin'],
     default: 'User'
-  }
+  },
+  reports: [{
+    reportedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'reports.reportedByModel',
+      required: true
+    },
+    reportedByModel: {
+      type: String,
+      enum: ['User', 'Admin'],
+      required: true
+    },
+    reason: { type: String, trim: true },
+    createdAt: { type: Date, default: Date.now }
+  }]
 }, {
   timestamps: true
 });

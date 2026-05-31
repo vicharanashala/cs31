@@ -166,7 +166,7 @@ function FAQ() {
         <h1 style={{
           fontSize: '1.5rem',
           fontWeight: 700,
-          color: '#fff',
+          color: 'var(--text-white)',
           margin: 0,
           letterSpacing: '-0.02em'
         }}>
@@ -177,8 +177,8 @@ function FAQ() {
             onClick={() => navigate('/ai-support')}
             style={{
               background: 'transparent',
-              border: '1px solid #7c6af5',
-              color: '#7c6af5',
+              border: '1px solid var(--accent)',
+              color: 'var(--accent)',
               borderRadius: '8px',
               padding: '0.45rem 1rem',
               fontSize: '0.82rem',
@@ -189,7 +189,7 @@ function FAQ() {
               gap: '0.4rem',
               transition: 'all 0.2s'
             }}
-            onMouseEnter={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.1)'; }}
+            onMouseEnter={(e) => { e.target.style.background = 'var(--bg-active)'; }}
             onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
           >
             💬 Open Mini Yaksha
@@ -202,9 +202,9 @@ function FAQ() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: message.includes('Error') ? '#3c1e1e' : 'rgba(52, 211, 153, 0.08)',
-          border: `1px solid ${message.includes('Error') ? '#7c1f1f' : 'rgba(52, 211, 153, 0.25)'}`,
-          color: message.includes('Error') ? '#f87171' : '#34d399',
+          background: message.includes('Error') ? 'var(--danger-soft)' : 'rgba(5, 150, 105, 0.08)',
+          border: `1px solid ${message.includes('Error') ? 'var(--border-danger)' : 'rgba(52, 211, 153, 0.25)'}`,
+          color: message.includes('Error') ? 'var(--danger)' : 'var(--success)',
           padding: '0.75rem 1.25rem',
           borderRadius: '10px',
           marginBottom: '1.5rem'
@@ -215,9 +215,9 @@ function FAQ() {
               type="button"
               onClick={clearHighlightedFAQ}
               style={{
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                color: '#fff',
+                background: 'var(--bg-hover)',
+                border: '1px solid var(--border-card)',
+                color: 'var(--text-white)',
                 borderRadius: '6px',
                 padding: '0.25rem 0.75rem',
                 fontSize: '0.75rem',
@@ -238,7 +238,7 @@ function FAQ() {
           left: '1rem',
           top: '50%',
           transform: 'translateY(-50%)',
-          color: '#7a7990',
+          color: 'var(--text-muted)',
           fontSize: '1rem'
         }}>
           🔍
@@ -252,16 +252,16 @@ function FAQ() {
             width: '100%',
             padding: '0.85rem 1rem 0.85rem 2.75rem',
             borderRadius: '12px',
-            border: '1px solid #1f1b3c',
-            background: '#0d0c1b',
-            color: '#fff',
+            border: '1px solid var(--border-card)',
+            background: 'var(--bg-main)',
+            color: 'var(--text-white)',
             fontSize: '0.9rem',
             outline: 'none',
             boxSizing: 'border-box',
             transition: 'border-color 0.2s'
           }}
-          onFocus={(e) => e.target.style.borderColor = '#7c6af5'}
-          onBlur={(e) => e.target.style.borderColor = '#1f1b3c'}
+          onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+          onBlur={(e) => e.target.style.borderColor = 'var(--border-card)'}
         />
       </div>
 
@@ -271,7 +271,7 @@ function FAQ() {
           display: 'block',
           fontSize: '0.68rem',
           fontWeight: 700,
-          color: '#525166',
+          color: 'var(--text-muted)',
           letterSpacing: '0.05em',
           textTransform: 'uppercase',
           marginBottom: '0.75rem'
@@ -284,9 +284,9 @@ function FAQ() {
             style={{
               padding: '0.45rem 1.1rem',
               borderRadius: '20px',
-              border: selectedSection === '' ? '1px solid #7c6af5' : '1px solid #1f1b3c',
-              background: selectedSection === '' ? 'rgba(124, 106, 245, 0.15)' : '#0d0c1b',
-              color: selectedSection === '' ? '#a78bfa' : '#8f8eaf',
+              border: selectedSection === '' ? '1px solid var(--accent)' : '1px solid var(--border-card)',
+              background: selectedSection === '' ? 'var(--bg-active)' : 'var(--bg-main)',
+              color: selectedSection === '' ? 'var(--accent)' : 'var(--text-muted)',
               fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
@@ -305,9 +305,9 @@ function FAQ() {
                 style={{
                   padding: '0.45rem 1.1rem',
                   borderRadius: '20px',
-                  border: isSelected ? '1px solid #7c6af5' : '1px solid #1f1b3c',
-                  background: isSelected ? 'rgba(124, 106, 245, 0.15)' : '#0d0c1b',
-                  color: isSelected ? '#a78bfa' : '#8f8eaf',
+                  border: isSelected ? '1px solid var(--accent)' : '1px solid var(--border-card)',
+                  background: isSelected ? 'var(--bg-active)' : 'var(--bg-main)',
+                  color: isSelected ? 'var(--accent)' : 'var(--text-muted)',
                   fontSize: '0.8rem',
                   fontWeight: 600,
                   cursor: 'pointer',
@@ -323,7 +323,7 @@ function FAQ() {
       </div>
 
       {search && (
-        <h4 style={{ color: '#8f8eaf', marginBottom: '1.25rem', fontSize: '0.9rem', fontWeight: 500 }}>
+        <h4 style={{ color: 'var(--text-muted)', marginBottom: '1.25rem', fontSize: '0.9rem', fontWeight: 500 }}>
           Search results for "{search}" ({faqs.length})
         </h4>
       )}
@@ -332,12 +332,12 @@ function FAQ() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1 }}>
         {sortedFaqs.length === 0 ? (
           <div style={{
-            background: '#121026',
-            border: '1px solid #1f1b3c',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
             borderRadius: '12px',
             padding: '3rem',
             textAlign: 'center',
-            color: '#7a7990',
+            color: 'var(--text-muted)',
             fontSize: '0.9rem'
           }}>
             No FAQs found matching the selected filters.
@@ -350,8 +350,8 @@ function FAQ() {
               <div
                 key={faq._id}
                 style={{
-                  background: '#121026',
-                  border: faq._id === highlightedFaqId ? '1px solid #34d399' : '1px solid #1f1b3c',
+                  background: 'var(--bg-card)',
+                  border: faq._id === highlightedFaqId ? '1px solid var(--success)' : '1px solid var(--border-card)',
                   borderRadius: '16px',
                   padding: '1.5rem',
                   boxSizing: 'border-box',
@@ -361,12 +361,12 @@ function FAQ() {
                 }}
                 onMouseEnter={(e) => {
                   if (faq._id !== highlightedFaqId) {
-                    e.currentTarget.style.borderColor = '#2e2a5e';
+                    e.currentTarget.style.borderColor = 'var(--accent)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (faq._id !== highlightedFaqId) {
-                    e.currentTarget.style.borderColor = '#1f1b3c';
+                    e.currentTarget.style.borderColor = 'var(--border-card)';
                   }
                 }}
               >
@@ -411,7 +411,7 @@ function FAQ() {
                   margin: '0 0 0.75rem 0',
                   fontSize: '1.05rem',
                   fontWeight: 700,
-                  color: '#fff',
+                  color: 'var(--text-white)',
                   lineHeight: 1.4
                 }}>
                   {faq.question}
@@ -421,7 +421,7 @@ function FAQ() {
                 <p style={{
                   margin: '0 0 1.25rem 0',
                   fontSize: '0.9rem',
-                  color: '#b4b3c8',
+                  color: 'var(--text-muted2)',
                   lineHeight: 1.6,
                   whiteSpace: 'pre-wrap'
                 }}>
@@ -434,7 +434,7 @@ function FAQ() {
                     <span key={tag} style={{
                       fontFamily: "'Courier New', Courier, monospace",
                       fontSize: '0.78rem',
-                      color: '#6366f1',
+                      color: 'var(--accent)',
                       fontWeight: 600
                     }}>
                       {tag}
@@ -447,19 +447,19 @@ function FAQ() {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  borderTop: '1px solid #1f1b3c',
+                  borderTop: '1px solid var(--border-card)',
                   paddingTop: '1rem',
                   fontSize: '0.78rem',
-                  color: '#7a7990'
+                  color: 'var(--text-muted)'
                 }}>
                   <span>{getViews(faq._id)} views</span>
 
                   <button
                     onClick={() => handleHelpfulClick(faq._id)}
                     style={{
-                      background: isHelpful ? 'rgba(99, 102, 241, 0.15)' : 'transparent',
-                      border: isHelpful ? '1px solid #6366f1' : '1px solid transparent',
-                      color: isHelpful ? '#a5b4fc' : '#7a7990',
+                      background: isHelpful ? 'var(--bg-active)' : 'transparent',
+                      border: isHelpful ? '1px solid var(--accent)' : '1px solid transparent',
+                      color: isHelpful ? 'var(--accent)' : 'var(--text-muted)',
                       padding: '0.35rem 0.75rem',
                       borderRadius: '6px',
                       fontSize: '0.78rem',
@@ -470,8 +470,8 @@ function FAQ() {
                       gap: '0.35rem',
                       transition: 'all 0.15s'
                     }}
-                    onMouseEnter={(e) => { if(!isHelpful) e.target.style.color = '#fff'; }}
-                    onMouseLeave={(e) => { if(!isHelpful) e.target.style.color = '#7a7990'; }}
+                    onMouseEnter={(e) => { if(!isHelpful) e.target.style.color = 'var(--text-white)'; }}
+                    onMouseLeave={(e) => { if(!isHelpful) e.target.style.color = 'var(--text-muted)'; }}
                   >
                     👍 Helpful ({getHelpfulCount(faq._id)})
                   </button>

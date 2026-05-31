@@ -3,15 +3,15 @@ import axios from 'axios';
 import Leaderboard from '../components/Leaderboard';
 
 const C = {
-  surface: '#121026',
-  surface2: '#191738',
-  border: '#1f1b3c',
-  accent: '#7c6af5',
-  accent2: '#06b6d4',
-  text: '#e2e8f0',
-  muted: '#7a7990',
-  success: '#34d399',
-  warning: '#fbbf24',
+  surface: 'var(--bg-card)',
+  surface2: 'var(--bg-surface2)',
+  border: 'var(--border-card)',
+  accent: 'var(--accent)',
+  accent2: 'var(--accent2)',
+  text: 'var(--text-main)',
+  muted: 'var(--text-muted)',
+  success: 'var(--success)',
+  warning: 'var(--warning)',
 };
 
 function Leaderboards() {
@@ -84,7 +84,7 @@ function Leaderboards() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <span style={{ fontSize: '2rem' }}>🏆</span>
-          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', margin: 0 }}>
+          <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: 'var(--text-white)', margin: 0 }}>
             Spurti Leaderboards
           </h1>
         </div>
@@ -97,9 +97,9 @@ function Leaderboards() {
         <div style={{
           padding: '1rem',
           borderRadius: '10px',
-          background: 'rgba(248, 113, 113, 0.1)',
-          border: '1px solid rgba(248, 113, 113, 0.25)',
-          color: '#f87171',
+          background: 'var(--danger-soft)',
+          border: '1px solid var(--border-danger)',
+          color: 'var(--danger)',
           fontSize: '0.85rem'
         }}>
           ⚠️ {error}

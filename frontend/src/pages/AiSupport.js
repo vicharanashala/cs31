@@ -95,15 +95,15 @@ function AiSupport() {
       width: '100%',
       maxWidth: '900px',
       margin: '0 auto',
-      background: '#111026',
-      border: '1px solid #1f1b3c',
+      background: 'var(--bg-card)',
+      border: '1px solid var(--border-card)',
       borderRadius: '16px',
       overflow: 'hidden'
     }}>
       {/* Header */}
       <div style={{
-        background: '#15142e',
-        borderBottom: '1px solid #1f1b3c',
+        background: 'var(--bg-surface2)',
+        borderBottom: '1px solid var(--border-card)',
         padding: '1.25rem 1.5rem',
         display: 'flex',
         alignItems: 'center',
@@ -113,14 +113,14 @@ function AiSupport() {
           width: '10px',
           height: '10px',
           borderRadius: '50%',
-          background: '#34d399',
-          boxShadow: '0 0 8px #34d399'
+          background: 'var(--success)',
+          boxShadow: '0 0 8px var(--success)'
         }} />
         <div>
-          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: '#fff' }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 600, color: 'var(--text-white)' }}>
             Mini Yaksha
           </h3>
-          <p style={{ margin: 0, fontSize: '0.75rem', color: '#7a7990' }}>
+          <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
             Broadcasting queries to verified Vicharanashala FAQ index
           </p>
         </div>
@@ -134,7 +134,7 @@ function AiSupport() {
         display: 'flex',
         flexDirection: 'column',
         gap: '1rem',
-        background: '#0d0c1b'
+        background: 'var(--bg-main)'
       }}>
         {messages.map((msg) => (
           <div
@@ -147,9 +147,9 @@ function AiSupport() {
           >
             <div style={{
               maxWidth: '75%',
-              background: msg.sender === 'user' ? '#7c6af5' : '#171630',
-              border: msg.sender === 'user' ? 'none' : '1px solid #232240',
-              color: '#e2e8f0',
+              background: msg.sender === 'user' ? 'var(--accent)' : 'var(--bg-surface2)',
+              border: msg.sender === 'user' ? 'none' : '1px solid var(--border-card)',
+              color: msg.sender === 'user' ? '#fff' : 'var(--text-main)',
               borderRadius: '12px',
               padding: '0.85rem 1.1rem',
               fontSize: '0.9rem',
@@ -175,11 +175,11 @@ function AiSupport() {
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
             <div style={{
-              background: '#171630',
-              border: '1px solid #232240',
+              background: 'var(--bg-surface2)',
+              border: '1px solid var(--border-card)',
               borderRadius: '12px',
               padding: '0.85rem 1.1rem',
-              color: '#7a7990',
+              color: 'var(--text-muted)',
               fontSize: '0.9rem'
             }}>
               Thinking...
@@ -193,7 +193,7 @@ function AiSupport() {
       {messages.length === 1 && (
         <div style={{
           padding: '0 1.5rem',
-          background: '#0d0c1b',
+          background: 'var(--bg-main)',
           display: 'flex',
           gap: '0.5rem',
           flexWrap: 'wrap',
@@ -209,9 +209,9 @@ function AiSupport() {
               key={suggestion}
               onClick={() => handleSuggestionClick(suggestion)}
               style={{
-                background: 'rgba(124, 106, 245, 0.1)',
-                border: '1px solid rgba(124, 106, 245, 0.25)',
-                color: '#a78bfa',
+                background: 'var(--bg-active)',
+                border: '1px solid var(--border-card)',
+                color: 'var(--accent)',
                 borderRadius: '20px',
                 padding: '0.35rem 0.8rem',
                 fontSize: '0.75rem',
@@ -219,8 +219,8 @@ function AiSupport() {
                 transition: 'all 0.2s',
                 outline: 'none'
               }}
-              onMouseEnter={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.25)'; }}
-              onMouseLeave={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.1)'; }}
+              onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; }}
+              onMouseLeave={(e) => { e.target.style.background = 'var(--bg-active)'; }}
             >
               {suggestion}
             </button>
@@ -230,8 +230,8 @@ function AiSupport() {
 
       {/* Input */}
       <form onSubmit={handleSend} style={{
-        background: '#121128',
-        borderTop: '1px solid #1f1b3c',
+        background: 'var(--bg-surface2)',
+        borderTop: '1px solid var(--border-card)',
         padding: '1rem',
         display: 'flex',
         gap: '0.75rem',
@@ -244,24 +244,24 @@ function AiSupport() {
           placeholder="Ask Mini Yaksha..."
           style={{
             flex: 1,
-            background: '#0a0a14',
-            border: '1px solid #1f1b3c',
+            background: 'var(--bg-main)',
+            border: '1px solid var(--border-card)',
             borderRadius: '10px',
-            color: '#fff',
+            color: 'var(--text-main)',
             padding: '0.75rem 1rem',
             fontSize: '0.9rem',
             outline: 'none',
             fontFamily: 'inherit'
           }}
-          onFocus={(e) => e.target.style.borderColor = '#7c6af5'}
-          onBlur={(e) => e.target.style.borderColor = '#1f1b3c'}
+          onFocus={(e) => e.target.style.borderColor = 'var(--accent)'}
+          onBlur={(e) => e.target.style.borderColor = 'var(--border-card)'}
         />
         <button
           type="submit"
           disabled={!input.trim()}
           style={{
-            background: input.trim() ? '#7c6af5' : '#1e1b38',
-            color: input.trim() ? '#fff' : '#525166',
+            background: input.trim() ? 'var(--accent)' : 'var(--border-card)',
+            color: input.trim() ? '#fff' : 'var(--text-muted)',
             border: 'none',
             borderRadius: '10px',
             padding: '0.75rem 1.25rem',

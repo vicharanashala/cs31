@@ -4,17 +4,17 @@ import { useNavigate } from 'react-router-dom';
 
 const C = {
   bg: 'transparent',
-  surface: '#121026',      // card / panel background
-  surface2: '#191738',     // hover / elevated background
-  border: '#1f1b3c',       // borders / dividers
-  accent: '#7c6af5',       // primary accent (purple)
-  accent2: '#6366f1',      // secondary accent (blue)
-  success: '#34d399',      // solution / approved
-  warning: '#fbbf24',      // pending / points
-  danger: '#f87171',       // delete / negative
-  text: '#e2e8f0',         // primary text
-  muted: '#7a7990',        // secondary text / metadata
-  muted2: '#b4b3c8'        // slightly brighter muted
+  surface: 'var(--bg-card)',      // card / panel background
+  surface2: 'var(--bg-surface2)',     // hover / elevated background
+  border: 'var(--border-card)',       // borders / dividers
+  accent: 'var(--accent)',       // primary accent (purple)
+  accent2: 'var(--accent2)',      // secondary accent (blue)
+  success: 'var(--success)',      // solution / approved
+  warning: 'var(--warning)',      // pending / points
+  danger: 'var(--danger)',       // delete / negative
+  text: 'var(--text-main)',         // primary text
+  muted: 'var(--text-muted)',        // secondary text / metadata
+  muted2: 'var(--text-muted2)'        // slightly brighter muted
 };
 
 function Notifications() {
@@ -168,7 +168,7 @@ function Notifications() {
           <h1 style={{
             fontSize: '1.5rem',
             fontWeight: 700,
-            color: '#fff',
+            color: 'var(--text-white)',
             margin: 0,
             letterSpacing: '-0.02em'
           }}>
@@ -216,7 +216,7 @@ function Notifications() {
               background: 'none',
               border: 'none',
               borderBottom: filter === 'all' ? `2px solid ${C.accent}` : '2px solid transparent',
-              color: filter === 'all' ? '#fff' : C.muted,
+              color: filter === 'all' ? 'var(--text-white)' : C.muted,
               padding: '0.75rem 0.5rem',
               fontSize: '0.9rem',
               fontWeight: 600,
@@ -229,7 +229,7 @@ function Notifications() {
           >
             All Notifications
             <span style={{
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--bg-active)',
               color: C.muted2,
               fontSize: '0.75rem',
               padding: '0.1rem 0.4rem',
@@ -243,7 +243,7 @@ function Notifications() {
               background: 'none',
               border: 'none',
               borderBottom: filter === 'unread' ? `2px solid ${C.accent}` : '2px solid transparent',
-              color: filter === 'unread' ? '#fff' : C.muted,
+              color: filter === 'unread' ? 'var(--text-white)' : C.muted,
               padding: '0.75rem 0.5rem',
               fontSize: '0.9rem',
               fontWeight: 600,
@@ -282,8 +282,28 @@ function Notifications() {
             textAlign: 'center',
             boxShadow: '0 4px 20px rgba(0,0,0,0.15)'
           }}>
-            <div style={{ fontSize: '3rem', marginBottom: '1.25rem' }}>🌌</div>
-            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600, color: '#fff' }}>
+            {filter === 'unread' ? (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                border: '2px solid var(--success)',
+                background: 'rgba(5, 150, 105, 0.08)',
+                color: 'var(--success)',
+                fontSize: '2rem',
+                fontWeight: 'bold',
+                margin: '0 auto 1.25rem auto',
+                boxShadow: '0 0 16px rgba(5, 150, 105, 0.15)'
+              }}>
+                ✓
+              </div>
+            ) : (
+              <div style={{ fontSize: '3rem', marginBottom: '1.25rem' }}>🌌</div>
+            )}
+            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', fontWeight: 600, color: 'var(--text-white)' }}>
               {filter === 'unread' ? 'All caught up!' : 'No notifications yet'}
             </h3>
             <p style={{ margin: 0, fontSize: '0.85rem', color: C.muted, maxWidth: '300px', marginHorizontal: 'auto' }}>
@@ -303,8 +323,8 @@ function Notifications() {
                   onMouseEnter={() => setHoveredId(notif._id)}
                   onMouseLeave={() => setHoveredId(null)}
                   style={{
-                    background: notif.isRead ? C.surface : 'rgba(25, 23, 56, 0.4)',
-                    border: `1px solid ${notif.isRead ? C.border : 'rgba(124, 106, 245, 0.25)'}`,
+                    background: notif.isRead ? C.surface : 'var(--bg-surface2)',
+                    border: `1px solid ${notif.isRead ? C.border : 'var(--bg-active)'}`,
                     borderLeft: `4px solid ${details.borderColor}`,
                     borderRadius: '12px',
                     padding: '1rem 1.25rem',
@@ -340,8 +360,8 @@ function Notifications() {
                     width: '42px',
                     height: '42px',
                     borderRadius: '10px',
-                    background: `rgba(${parseInt(details.color.slice(1,3), 16) || 124}, ${parseInt(details.color.slice(3,5), 16) || 106}, ${parseInt(details.color.slice(5,7), 16) || 245}, 0.1)`,
-                    border: `1px solid rgba(${parseInt(details.color.slice(1,3), 16) || 124}, ${parseInt(details.color.slice(3,5), 16) || 106}, ${parseInt(details.color.slice(5,7), 16) || 245}, 0.2)`,
+                    background: 'var(--bg-active)',
+                    border: '1px solid var(--border-card)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -361,7 +381,7 @@ function Notifications() {
                         {formatTimestamp(notif.createdAt)}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: '0.9rem', color: '#fff', lineHeight: 1.45, fontWeight: notif.isRead ? 400 : 500 }}>
+                    <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-white)', lineHeight: 1.45, fontWeight: notif.isRead ? 400 : 500 }}>
                       {notif.text}
                     </p>
                   </div>

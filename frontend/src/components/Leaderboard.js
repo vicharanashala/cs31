@@ -1,15 +1,15 @@
 import React from 'react';
 
 const C = {
-  surface: '#121026',
-  surface2: '#191738',
-  border: '#1f1b3c',
-  accent: '#7c6af5',
-  accent2: '#06b6d4',
-  text: '#e2e8f0',
-  muted: '#7a7990',
-  success: '#34d399',
-  warning: '#fbbf24',
+  surface: 'var(--bg-card)',
+  surface2: 'var(--bg-surface2)',
+  border: 'var(--border-card)',
+  accent: 'var(--accent)',
+  accent2: 'var(--accent2)',
+  text: 'var(--text-main)',
+  muted: 'var(--text-muted)',
+  success: 'var(--success)',
+  warning: 'var(--warning)',
 };
 
 const maskEmail = (email) => {
@@ -24,10 +24,10 @@ const maskEmail = (email) => {
 
 function Leaderboard({ title, data, type = 'students' }) {
   const getRankBadge = (rank) => {
-    if (rank === 1) return { char: '🥇', bg: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', border: '#fbbf24' };
-    if (rank === 2) return { char: '🥈', bg: 'rgba(226, 232, 240, 0.15)', color: '#e2e8f0', border: '#cbd5e1' };
-    if (rank === 3) return { char: '🥉', bg: 'rgba(217, 119, 6, 0.15)', color: '#d97706', border: '#b45309' };
-    return { char: rank, bg: 'rgba(255,255,255,0.02)', color: C.muted, border: C.border };
+    if (rank === 1) return { char: '🥇', bg: 'var(--bg-active)', color: 'var(--warning)', border: 'var(--warning)' };
+    if (rank === 2) return { char: '🥈', bg: 'var(--bg-hover)', color: 'var(--text-white)', border: 'var(--border-card)' };
+    if (rank === 3) return { char: '🥉', bg: 'var(--danger-soft)', color: 'var(--danger)', border: 'var(--danger)' };
+    return { char: rank, bg: 'var(--bg-hover)', color: C.muted, border: C.border };
   };
 
   const getBadgeName = (pts, role) => {
@@ -39,11 +39,11 @@ function Leaderboard({ title, data, type = 'students' }) {
   };
 
   const getBadgeColor = (name) => {
-    if (name === 'Admin') return '#f87171';
-    if (name === 'Coordinator') return '#fbbf24';
-    if (name === 'Sub-Coord') return '#38bdf8';
-    if (name === 'Volunteer') return '#c084fc';
-    return '#a78bfa';
+    if (name === 'Admin') return 'var(--danger)';
+    if (name === 'Coordinator') return 'var(--warning)';
+    if (name === 'Sub-Coord') return 'var(--accent2)';
+    if (name === 'Volunteer') return 'var(--accent)';
+    return 'var(--accent)';
   };
 
   return (
@@ -59,7 +59,7 @@ function Leaderboard({ title, data, type = 'students' }) {
       width: '100%'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${C.border}`, paddingBottom: '0.75rem' }}>
-        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#fff', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <h3 style={{ fontSize: '0.95rem', fontWeight: 700, color: 'var(--text-white)', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           {type === 'students' ? '🏆' : '🛡️'} {title}
         </h3>
         <span style={{ fontSize: '0.7rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
@@ -149,7 +149,7 @@ function Leaderboard({ title, data, type = 'students' }) {
                   <span style={{
                     fontSize: '0.8rem',
                     fontWeight: 600,
-                    color: '#e2e8f0',
+                    color: 'var(--text-white)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap'
@@ -170,7 +170,7 @@ function Leaderboard({ title, data, type = 'students' }) {
 
                 {/* SP Count */}
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                  <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: '#fff' }}>
+                  <span style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-white)' }}>
                     {userPts}
                   </span>
                   <span style={{ display: 'block', fontSize: '0.6rem', fontWeight: 700, color: C.accent2, textTransform: 'uppercase' }}>

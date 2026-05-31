@@ -524,6 +524,7 @@ function Questions() {
                     active={hasUpvoted(q)}
                     onClick={() => handleUpvote(q._id)}
                     label="▲"
+                    filledLabel="▲"
                     activeColor="#22c55e"
                   />
                   <span style={{
@@ -538,6 +539,7 @@ function Questions() {
                     active={hasDownvoted(q)}
                     onClick={() => handleDownvote(q._id)}
                     label="▼"
+                    filledLabel="▼"
                     activeColor="#ef4444"
                   />
                 </div>
@@ -742,9 +744,9 @@ function Questions() {
                             boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(34,197,94,0.2)' : 'none'
                           }}
                         >
-                          ▲ {reply.upvoteCount || 0}
+                          {hasReplyUpvoted(reply) ? '▲' : '▲'} {reply.upvoteCount || 0}
                         </button>
-                        
+
                         {/* Reply Downvote */}
                         <button
                           onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
@@ -763,7 +765,7 @@ function Questions() {
                             boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(239,68,68,0.2)' : 'none'
                           }}
                         >
-                          ▼ {reply.downvoteCount || 0}
+                          {hasReplyDownvoted(reply) ? '▼' : '▼'} {reply.downvoteCount || 0}
                         </button>
                         
                         <button
@@ -1109,11 +1111,12 @@ function Badge({ children }) {
   );
 }
 
-function VoteBtn({ active, onClick, label, activeColor }) {
+function VoteBtn({ active, onClick, label, filledLabel, activeColor }) {
   const activeBg = activeColor === '#22c55e' ? '34,197,94' : '239,68,68';
   return (
     <button
       onClick={onClick}
+      title={active ? 'Remove vote' : 'Vote'}
       style={{
         background: active ? `rgba(${activeBg},0.15)` : 'transparent',
         border: `1px solid ${active ? activeColor : C.border}`,
@@ -1133,7 +1136,7 @@ function VoteBtn({ active, onClick, label, activeColor }) {
       onMouseEnter={(e) => { if (!active) e.target.style.borderColor = activeColor; }}
       onMouseLeave={(e) => { if (!active) e.target.style.borderColor = C.border; }}
     >
-      {label}
+      {active ? (filledLabel || label) : label}
     </button>
   );
 }

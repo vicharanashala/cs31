@@ -145,8 +145,10 @@ function Questions() {
   // --- Handlers ---
   const handleUpvote = async (id) => {
     try {
-      await axios.post(`/api/questions/${id}/upvote`, {}, config);
-      refreshAll();
+      const res = await axios.post(`/api/questions/${id}/upvote`, {}, config);
+      const updated = res.data.question;
+      setQuestions(prev => prev.map(q => q._id === id ? updated : q));
+      setMyQuestions(prev => prev.map(q => q._id === id ? updated : q));
     } catch (err) {
       console.error('Upvote error:', err);
     }
@@ -154,8 +156,10 @@ function Questions() {
 
   const handleDownvote = async (id) => {
     try {
-      await axios.post(`/api/questions/${id}/downvote`, {}, config);
-      refreshAll();
+      const res = await axios.post(`/api/questions/${id}/downvote`, {}, config);
+      const updated = res.data.question;
+      setQuestions(prev => prev.map(q => q._id === id ? updated : q));
+      setMyQuestions(prev => prev.map(q => q._id === id ? updated : q));
     } catch (err) {
       console.error('Downvote error:', err);
     }
@@ -163,8 +167,10 @@ function Questions() {
 
   const handleReplyVote = async (qId, replyId, type) => {
     try {
-      await axios.post(`/api/questions/${qId}/replies/${replyId}/${type}`, {}, config);
-      refreshAll();
+      const res = await axios.post(`/api/questions/${qId}/replies/${replyId}/${type}`, {}, config);
+      const updated = res.data;
+      setQuestions(prev => prev.map(q => q._id === qId ? updated : q));
+      setMyQuestions(prev => prev.map(q => q._id === qId ? updated : q));
     } catch (err) {
       console.error('Reply vote error:', err);
     }

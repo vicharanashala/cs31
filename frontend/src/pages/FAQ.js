@@ -153,9 +153,30 @@ function FAQ() {
     return aQ - bQ;
   });
 
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 12) return '🌅 Good Morning';
+    if (hr < 17) return '☀️ Good Afternoon';
+    return '🌙 Good Evening';
+  };
+
   return (
     <div style={{ position: 'relative', minHeight: '100%', display: 'flex', flexDirection: 'column', width: '100%' }}>
       
+      {/* Dynamic Welcome Greeting */}
+      <div style={{ marginBottom: '0.5rem' }}>
+        <p style={{
+          margin: 0,
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: 'var(--accent)',
+          fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+          letterSpacing: '0.01em'
+        }}>
+          {getGreeting()}, {storedUser.name || 'User'}! Welcome Back
+        </p>
+      </div>
+
       {/* Title Header Row */}
       <div style={{
         display: 'flex',

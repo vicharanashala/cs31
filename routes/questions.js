@@ -500,7 +500,7 @@ router.get('/faq-requests', auth, async (req, res) => {
     }
     
     const questions = await Question.find({
-      upvoteCount: { $gt: 20 },
+      upvoteCount: { $gte: 20 },
       promotedToFAQ: 'none'
     })
       .populate('createdBy', 'name email role spurtiPoints')
@@ -589,6 +589,34 @@ router.post('/:id/deny-faq', auth, async (req, res) => {
   } catch (err) {
     console.error('Deny FAQ Error:', err);
     res.status(500).json({ message: 'Error denying FAQ request' });
+  }
+});
+
+// PUT edit question text (Admin only)
+router.put('/:id', auth, async (req, res) => {
+  const { question } = req.body;
+  if (!question || question.trim().length === 0) {
+    return res.status(400).json({ message: 'Question text is required' });
+  }
+
+  try {
+    const Admin = require('../models/Admin');
+    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const q = await Question.findById(req.params.id);
+    if (!q) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    q.question = question.trim();
+    await q.save();
+
+    res.json({ message: 'Question updated successfully', question: q });
+  } catch (err) {
+    console.error('Update Question Error:', err);
+    res.status(500).json({ message: 'Error updating question' });
   }
 });
 
@@ -820,6 +848,39 @@ router.delete('/:id/replies/:replyId', auth, async (req, res) => {
   } catch (err) {
     console.error('Delete Reply Error:', err);
     res.status(500).json({ message: 'Error deleting reply' });
+  }
+});
+
+// PUT edit reply text (Admin only)
+router.put('/:id/replies/:replyId', auth, async (req, res) => {
+  const { text } = req.body;
+  if (!text || text.trim().length === 0) {
+    return res.status(400).json({ message: 'Reply text is required' });
+  }
+
+  try {
+    const Admin = require('../models/Admin');
+    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
+      return res.status(403).json({ message: 'Admin access required' });
+    }
+
+    const question = await Question.findById(req.params.id);
+    if (!question) {
+      return res.status(404).json({ message: 'Question not found' });
+    }
+
+    const reply = question.replies.id(req.params.replyId);
+    if (!reply) {
+      return res.status(404).json({ message: 'Reply not found' });
+    }
+
+    reply.text = text.trim();
+    await question.save();
+
+    res.json({ message: 'Reply updated successfully', question });
+  } catch (err) {
+    console.error('Update Reply Error:', err);
+    res.status(500).json({ message: 'Error updating reply' });
   }
 });
 

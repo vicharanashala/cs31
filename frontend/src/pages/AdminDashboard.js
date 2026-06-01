@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import Leaderboard from '../components/Leaderboard';
 
 const C = {
   bg: 'transparent',
@@ -21,7 +20,6 @@ const C = {
 function AdminDashboard() {
   const navigate = useNavigate();
   const [faqRequests, setFaqRequests] = useState([]);
-  const [pendingQuestions, setPendingQuestions] = useState([]);
   const [approvedQuestions, setApprovedQuestions] = useState([]);
   const [allQuestions, setAllQuestions] = useState([]);
   const [sections, setSections] = useState([]);
@@ -32,17 +30,24 @@ function AdminDashboard() {
   const [showFaqDraft, setShowFaqDraft] = useState({});
   const [editedQuestion, setEditedQuestion] = useState({});
   
-  const [studentsLeaderboard, setStudentsLeaderboard] = useState([]);
-  const [adminsLeaderboard, setAdminsLeaderboard] = useState([]);
   const [reportedItems, setReportedItems] = useState([]);
   
-  const [message, setMessage] = useState('');
+  const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState('faqRequests');
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmAction, setConfirmAction] = useState(null); // { label, message, onConfirm }
+  const [editQuestionModal, setEditQuestionModal] = useState(null); // { id, text }
 
   const token = localStorage.getItem('token');
   const config = { headers: { 'x-auth-token': token } };
+  const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+
+  const getGreeting = () => {
+    const hr = new Date().getHours();
+    if (hr < 12) return '🌅 Good Morning';
+    if (hr < 17) return '☀️ Good Afternoon';
+    return '🌙 Good Evening';
+  };
 
   const fetchFAQRequests = async () => {
     try {
@@ -53,14 +58,7 @@ function AdminDashboard() {
     }
   };
 
-  const fetchPendingQuestions = async () => {
-    try {
-      const res = await axios.get('/api/questions/pending', config);
-      setPendingQuestions(res.data);
-    } catch (err) {
-      console.error('Error fetching pending questions:', err);
-    }
-  };
+
 
   const fetchFAQs = async () => {
     try {
@@ -89,21 +87,6 @@ function AdminDashboard() {
     }
   };
 
-  const fetchLeaderboards = async () => {
-    try {
-      const studRes = await axios.get('/api/auth/leaderboard/students', config);
-      setStudentsLeaderboard(studRes.data);
-    } catch (err) {
-      console.error('Error fetching students leaderboard:', err);
-    }
-    try {
-      const admRes = await axios.get('/api/auth/leaderboard/admins', config);
-      setAdminsLeaderboard(admRes.data);
-    } catch (err) {
-      console.error('Error fetching admins leaderboard:', err);
-    }
-  };
-
   const fetchReportedItems = async () => {
     try {
       const res = await axios.get('/api/questions/reported', config);
@@ -115,11 +98,9 @@ function AdminDashboard() {
 
   const refreshAll = () => {
     fetchFAQRequests();
-    fetchPendingQuestions();
     fetchFAQs();
     fetchSections();
     fetchAllQuestions();
-    fetchLeaderboards();
     fetchReportedItems();
   };
 
@@ -132,30 +113,33 @@ function AdminDashboard() {
     refreshAll();
   }, [navigate]);
 
+  const showToast = (text, type = 'success') => {
+    setToast({ text, type });
+    setTimeout(() => setToast(null), 3500);
+  };
+
   const handleApprove = async (questionId) => {
     const ans = answer[questionId];
     if (!ans || ans.trim().length === 0) {
-      setMessage('Please provide an answer before approving');
-      setTimeout(() => setMessage(''), 3000);
+      showToast('Please provide an answer before approving', 'error');
       return;
     }
 
     const sec = customSection[questionId] || section[questionId] || 'Community Contribution';
     
-    // Fallback to original question text from faqRequests or pendingQuestions if not edited
-    const qObj = faqRequests.find(q => q._id === questionId) || pendingQuestions.find(q => q._id === questionId);
+    // Fallback to original question text from faqRequests if not edited
+    const qObj = faqRequests.find(q => q._id === questionId);
     const originalText = qObj ? qObj.question : '';
     const qText = editedQuestion[questionId] !== undefined ? editedQuestion[questionId] : originalText;
 
     if (!qText || qText.trim().length === 0) {
-      setMessage('Question text cannot be empty');
-      setTimeout(() => setMessage(''), 3000);
+      showToast('Question text cannot be empty', 'error');
       return;
     }
 
     try {
       await axios.post(`/api/questions/${questionId}/approve`, { answer: ans, section: sec, question: qText.trim() }, config);
-      setMessage('Question approved and added to FAQ directory successfully!');
+      showToast('Question approved and added to FAQ directory successfully!');
       refreshAll();
       
       // Reset inputs
@@ -164,63 +148,72 @@ function AdminDashboard() {
       setCustomSection(prev => ({ ...prev, [questionId]: '' }));
       setEditedQuestion(prev => ({ ...prev, [questionId]: '' }));
       setShowFaqDraft(prev => ({ ...prev, [questionId]: false }));
-      
-      setTimeout(() => setMessage(''), 4000);
     } catch (err) {
-      setMessage(err.response?.data?.message || 'Error approving question');
-      setTimeout(() => setMessage(''), 4000);
+      showToast(err.response?.data?.message || 'Error approving question', 'error');
     }
   };
 
-  const handleDenyFAQRequest = async (questionId) => {
+  const handleDenyFAQRequest = (questionId) => {
     setConfirmAction({
-      label: 'Deny Request',
+      label: 'Deny',
       message: 'Are you sure you want to deny this FAQ promotion request? The question will remain in the community questions feed but will be removed from this queue.',
       onConfirm: async () => {
         try {
           await axios.post(`/api/questions/${questionId}/deny-faq`, {}, config);
-          setMessage('FAQ promotion request denied successfully');
+          showToast('FAQ promotion request denied successfully');
           refreshAll();
-          setTimeout(() => setMessage(''), 3000);
         } catch (err) {
-          setMessage(err.response?.data?.message || 'Error denying FAQ request');
-          setTimeout(() => setMessage(''), 3000);
+          showToast(err.response?.data?.message || 'Error denying FAQ request', 'error');
         }
       }
     });
   };
 
-  const handleReject = async (questionId) => {
+  const handleSaveQuestionEdit = async (questionId, newText) => {
+    if (!newText || newText.trim().length === 0) {
+      showToast('Question text cannot be empty', 'error');
+      return;
+    }
+    try {
+      await axios.put(`/api/questions/${questionId}`, { question: newText.trim() }, config);
+      showToast('Question updated successfully!');
+      setEditQuestionModal(null);
+      refreshAll();
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Error updating question', 'error');
+    }
+  };
+
+  const handleDeleteQuestionFromModal = (questionId) => {
     setConfirmAction({
-      label: 'Reject Question',
-      message: 'Are you sure you want to reject and delete this question request?',
+      label: 'Delete',
+      message: 'Are you sure you want to delete this question permanently? This action cannot be undone.',
       onConfirm: async () => {
         try {
           await axios.delete(`/api/questions/${questionId}`, config);
-          setMessage('Question deleted successfully');
+          showToast('Question deleted successfully');
+          setEditQuestionModal(null);
           refreshAll();
-          setTimeout(() => setMessage(''), 3000);
         } catch (err) {
-          setMessage(err.response?.data?.message || 'Error deleting question');
-          setTimeout(() => setMessage(''), 3000);
+          showToast(err.response?.data?.message || 'Error deleting question', 'error');
         }
       }
     });
   };
 
-  const handleDeleteFAQ = async (faqId) => {
+
+
+  const handleDeleteFAQ = (faqId) => {
     setConfirmAction({
-      label: 'Delete FAQ',
+      label: 'Delete',
       message: 'Are you sure you want to delete this FAQ entry permanently?',
       onConfirm: async () => {
         try {
           await axios.delete(`/api/faqs/${faqId}`, config);
-          setMessage('FAQ entry deleted');
+          showToast('FAQ entry deleted');
           refreshAll();
-          setTimeout(() => setMessage(''), 3000);
         } catch (err) {
-          setMessage('Error deleting FAQ');
-          setTimeout(() => setMessage(''), 3000);
+          showToast('Error deleting FAQ', 'error');
         }
       }
     });
@@ -233,22 +226,21 @@ function AdminDashboard() {
       } else {
         await axios.post(`/api/questions/${item.questionId}/replies/${item.id}/dismiss-reports`, {}, config);
       }
-      setMessage('Reports dismissed successfully');
+      showToast('Reports dismissed successfully');
       refreshAll();
-      setTimeout(() => setMessage(''), 3000);
     } catch (err) {
       console.error('Error dismissing reports:', err);
-      setMessage(err.response?.data?.message || 'Error dismissing reports');
-      setTimeout(() => setMessage(''), 3000);
+      showToast(err.response?.data?.message || 'Error dismissing reports', 'error');
     }
   };
 
-  const handleDeleteReportedItem = async (item) => {
+  const handleDeleteReportedItem = (item) => {
     const confirmMsg = item.type === 'question'
       ? 'Are you sure you want to permanently delete this reported question?'
       : 'Are you sure you want to permanently delete this reported reply?';
+    
     setConfirmAction({
-      label: 'Delete Reported ' + (item.type === 'question' ? 'Question' : 'Reply'),
+      label: 'Delete',
       message: confirmMsg,
       onConfirm: async () => {
         try {
@@ -257,13 +249,11 @@ function AdminDashboard() {
           } else {
             await axios.delete(`/api/questions/${item.questionId}/replies/${item.id}`, config);
           }
-          setMessage('Reported item deleted successfully');
+          showToast('Reported item deleted successfully');
           refreshAll();
-          setTimeout(() => setMessage(''), 3000);
         } catch (err) {
           console.error('Error deleting reported item:', err);
-          setMessage(err.response?.data?.message || 'Error deleting reported item');
-          setTimeout(() => setMessage(''), 3000);
+          showToast(err.response?.data?.message || 'Error deleting reported item', 'error');
         }
       }
     });
@@ -312,6 +302,20 @@ function AdminDashboard() {
   return (
     <div style={{ background: C.bg, minHeight: '100%', color: C.text, display: 'flex', flexDirection: 'column', width: '100%' }}>
       
+      {/* Dynamic Welcome Greeting */}
+      <div style={{ marginBottom: '0.5rem' }}>
+        <p style={{
+          margin: 0,
+          fontSize: '1rem',
+          fontWeight: 600,
+          color: 'var(--accent)',
+          fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif",
+          letterSpacing: '0.01em'
+        }}>
+          {getGreeting()}, {storedUser.name || 'Admin'}! Welcome Back
+        </p>
+      </div>
+
       {/* Title Header bar */}
       <div style={{
         display: 'flex',
@@ -346,23 +350,7 @@ function AdminDashboard() {
           >
             FAQ Requests ({faqRequests.length})
           </button>
-          <button 
-            onClick={() => setActiveTab('pending')}
-            style={{
-              padding: '0.5rem 1.1rem',
-              borderRadius: '20px',
-              border: activeTab === 'pending' ? `1px solid ${C.accent}` : `1px solid ${C.border}`,
-              background: activeTab === 'pending' ? 'var(--bg-active)' : 'var(--bg-surface2)',
-              color: activeTab === 'pending' ? 'var(--accent)' : 'var(--text-muted)',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              transition: 'all 0.2s',
-              outline: 'none'
-            }}
-          >
-            Pending Review ({pendingQuestions.length})
-          </button>
+
           <button 
             onClick={() => setActiveTab('approved')}
             style={{
@@ -421,36 +409,7 @@ function AdminDashboard() {
           <span style={{ fontSize: '1.75rem', filter: 'grayscale(30%)' }}>📈</span>
         </div>
 
-        {/* Metric 2: Pending Questions */}
-        <div style={{
-          background: C.surface,
-          border: `1px solid ${C.border}`,
-          borderRadius: '16px',
-          padding: '1.25rem 1.5rem',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: '4px',
-            background: C.warning
-          }} />
-          <div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Awaiting Community Review
-            </span>
-            <h2 style={{ margin: '0.25rem 0 0 0', fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-white)' }}>
-              {pendingQuestions.length}
-            </h2>
-          </div>
-          <span style={{ fontSize: '1.75rem', filter: 'grayscale(30%)' }}>⏳</span>
-        </div>
+
 
         {/* Metric 3: Total FAQs */}
         <div style={{
@@ -751,17 +710,136 @@ function AdminDashboard() {
         </div>
       )}
 
-      {message && (
+      {/* Edit Question Modal */}
+      {editQuestionModal && (
         <div style={{
-          background: message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--danger-soft)' : 'rgba(5, 150, 105, 0.08)',
-          border: `1px solid ${message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--border-danger)' : 'rgba(52, 211, 153, 0.25)'}`,
-          color: message.includes('Error') || message.includes('reject') || message.includes('denied') ? 'var(--danger)' : 'var(--success)',
-          padding: '0.75rem 1.25rem',
-          borderRadius: '10px',
-          marginBottom: '1.5rem',
-          fontSize: '0.85rem'
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(0,0,0,0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9998,
+          backdropFilter: 'blur(4px)'
         }}>
-          {message}
+          <div style={{
+            background: C.surface,
+            border: `1px solid ${C.border}`,
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.5)',
+            boxSizing: 'border-box'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <span style={{ fontSize: '1.5rem' }}>✏️</span>
+              <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: 'var(--text-white)' }}>
+                Edit Question
+              </h2>
+            </div>
+            
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: C.muted2, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                Question Text
+              </label>
+              <textarea
+                value={editQuestionModal.text}
+                onChange={(e) => {
+                  const text = e.target.value;
+                  setEditQuestionModal(prev => ({ ...prev, text }));
+                }}
+                rows="4"
+                style={{
+                  width: '100%',
+                  background: 'var(--bg-main)',
+                  border: `1px solid ${C.border}`,
+                  borderRadius: '8px',
+                  color: C.text,
+                  padding: '0.65rem 0.85rem',
+                  fontSize: '0.88rem',
+                  resize: 'vertical',
+                  fontFamily: 'inherit',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button
+                onClick={() => handleDeleteQuestionFromModal(editQuestionModal.id)}
+                style={{
+                  padding: '0.5rem 1.25rem',
+                  borderRadius: '8px',
+                  border: `1px solid ${C.danger}`,
+                  background: 'transparent',
+                  color: C.danger,
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = 'rgba(248,113,113,0.08)'}
+                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+              >
+                🗑️ Delete Question
+              </button>
+              
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setEditQuestionModal(null)}
+                  style={{
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '8px',
+                    border: `1px solid ${C.border}`,
+                    background: 'transparent',
+                    color: C.text,
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleSaveQuestionEdit(editQuestionModal.id, editQuestionModal.text)}
+                  style={{
+                    padding: '0.5rem 1.25rem',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: C.accent,
+                    color: '#fff',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          bottom: '2rem',
+          right: '2rem',
+          background: toast.type === 'error' ? 'var(--danger-soft)' : 'rgba(5, 150, 105, 0.9)',
+          border: `1px solid ${toast.type === 'error' ? 'var(--border-danger)' : 'rgba(52, 211, 153, 0.3)'}`,
+          color: toast.type === 'error' ? 'var(--danger)' : '#fff',
+          padding: '0.75rem 1.5rem',
+          borderRadius: '10px',
+          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.3)',
+          zIndex: 1100,
+          fontSize: '0.85rem',
+          fontWeight: 600,
+          pointerEvents: 'none'
+        }}>
+          {toast.text}
         </div>
       )}
 
@@ -770,7 +848,7 @@ function AdminDashboard() {
         width: '100%',
         margin: '0 auto',
         display: 'grid',
-        gridTemplateColumns: '1fr 340px',
+        gridTemplateColumns: activeTab === 'faqRequests' ? '1fr 340px' : '1fr',
         gap: '2rem',
         alignItems: 'start',
         boxSizing: 'border-box',
@@ -866,6 +944,26 @@ function AdminDashboard() {
                         onMouseLeave={(e) => e.target.style.background = 'transparent'}
                       >
                         Deny Request
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditQuestionModal({ id: q._id, text: q.question });
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: `1px solid ${C.accent2}`,
+                          color: C.accent2,
+                          borderRadius: '8px',
+                          padding: '0.45rem 1.25rem',
+                          fontSize: '0.8rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => e.target.style.background = 'rgba(6,182,212,0.08)'}
+                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                      >
+                        ✏️ Edit / Delete
                       </button>
                     </div>
                   ) : (
@@ -1021,148 +1119,7 @@ function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 2: Pending community review */}
-        {activeTab === 'pending' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {pendingQuestions.length === 0 ? (
-              <div style={{
-                background: C.surface,
-                border: `1px solid ${C.border}`,
-                borderRadius: '16px',
-                padding: '4rem 2rem',
-                textAlign: 'center',
-                color: C.muted,
-                fontSize: '0.9rem'
-              }}>
-                No pending questions. All caught up! 🎉
-              </div>
-            ) : (
-              pendingQuestions.map((q) => (
-                <div key={q._id} style={{
-                  background: C.surface,
-                  border: `1px solid ${C.border}`,
-                  borderRadius: '16px',
-                  padding: '1.5rem',
-                  boxSizing: 'border-box'
-                }}>
-                  {/* Title/Meta */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <span style={{
-                      fontSize: '0.65rem',
-                      fontWeight: 800,
-                      textTransform: 'uppercase',
-                      letterSpacing: '0.08em',
-                      padding: '0.2rem 0.5rem',
-                      borderRadius: '5px',
-                      color: C.warning,
-                      background: 'rgba(251, 191, 36, 0.12)'
-                    }}>
-                      Pending Review
-                    </span>
-                    <span style={{ fontSize: '0.72rem', color: C.muted }}>
-                      Posted by {q.createdBy?.name || 'Unknown'} • {new Date(q.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
 
-                  {/* Editable Question Input */}
-                  <div style={{ marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: C.muted2, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                      Edit Question Text
-                    </label>
-                    <input
-                      type="text"
-                      value={editedQuestion[q._id] !== undefined ? editedQuestion[q._id] : q.question}
-                      onChange={(e) => setEditedQuestion(prev => ({ ...prev, [q._id]: e.target.value }))}
-                      style={{
-                        width: '100%',
-                        background: '#0d0c1b',
-                        border: `1px solid ${C.border}`,
-                        borderRadius: '10px',
-                        color: C.text,
-                        padding: '0.75rem 1rem',
-                        fontSize: '0.9rem',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-
-                  {/* Answer Input */}
-                  <div style={{ marginBottom: '1.25rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: C.muted2, marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                      Draft Answer for FAQ (Optional Promotion)
-                    </label>
-                    <textarea
-                      value={answer[q._id] || ''}
-                      onChange={(e) => setAnswer({ ...answer, [q._id]: e.target.value })}
-                      placeholder="Write the verified answer to promote this question directly to FAQ directory..."
-                      rows="3"
-                      style={{
-                        width: '100%',
-                        background: '#0d0c1b',
-                        border: `1px solid ${C.border}`,
-                        borderRadius: '10px',
-                        color: C.text,
-                        padding: '0.75rem 1rem',
-                        fontSize: '0.9rem',
-                        resize: 'none',
-                        fontFamily: 'inherit',
-                        outline: 'none',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-
-                  {/* Upvote context & actions */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.border}`, paddingTop: '1rem' }}>
-                    <span style={{ fontSize: '0.75rem', color: C.muted, fontWeight: 600 }}>
-                      🔥 Upvotes: {q.upvoteCount || 0}
-                    </span>
-                    <div style={{ display: 'flex', gap: '0.6rem' }}>
-                      <button
-                        onClick={() => handleReject(q._id)}
-                        style={{
-                          background: 'transparent',
-                          border: `1px solid ${C.danger}`,
-                          color: C.danger,
-                          borderRadius: '8px',
-                          padding: '0.45rem 1rem',
-                          fontSize: '0.8rem',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onMouseEnter={(e) => e.target.style.background = 'rgba(248,113,113,0.08)'}
-                        onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                      >
-                        ✕ Reject
-                      </button>
-                      <button
-                        onClick={() => handleApprove(q._id)}
-                        disabled={!(answer[q._id] || '').trim()}
-                        style={{
-                          background: (answer[q._id] || '').trim() ? C.accent : 'var(--bg-surface2)',
-                          color: (answer[q._id] || '').trim() ? '#fff' : 'var(--text-muted)',
-                          border: `1px solid ${C.border}`,
-                          borderRadius: '8px',
-                          padding: '0.45rem 1.25rem',
-                          fontSize: '0.8rem',
-                          fontWeight: 700,
-                          cursor: (answer[q._id] || '').trim() ? 'pointer' : 'not-allowed',
-                          transition: 'all 0.2s'
-                        }}
-                      >
-                        ✓ Approve & Add to FAQ
-                      </button>
-                    </div>
-                  </div>
-
-                </div>
-              ))
-            )}
-          </div>
-        )}
 
         {/* TAB 3: Manage FAQ directory */}
         {activeTab === 'approved' && (
@@ -1262,9 +1219,9 @@ function AdminDashboard() {
 
         </div>
 
-        {/* Right Column: Leaderboards or Reports */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '1.5rem' }}>
-          {activeTab === 'faqRequests' ? (
+        {/* Right Column: Reports */}
+        {activeTab === 'faqRequests' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', position: 'sticky', top: '1.5rem' }}>
             <div style={{
               background: C.surface,
               border: `1px solid ${C.border}`,
@@ -1417,13 +1374,8 @@ function AdminDashboard() {
                 </div>
               )}
             </div>
-          ) : (
-            <>
-              <Leaderboard title="Student Leaderboard" data={studentsLeaderboard} type="students" />
-              <Leaderboard title="Admin Leaderboard" data={adminsLeaderboard} type="admins" />
-            </>
-          )}
-        </div>
+          </div>
+        )}
 
       </div>
     </div>

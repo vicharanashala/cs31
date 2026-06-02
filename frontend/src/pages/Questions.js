@@ -399,7 +399,7 @@ function Questions() {
           margin: 0,
           letterSpacing: '-0.02em'
         }}>
-          Post Questions
+          Discussion Space
         </h1>
         <div style={{ display: 'flex', gap: '0.45rem' }}>
           <FilterPill active={activeTab === 'all'} onClick={() => setActiveTab('all')}>

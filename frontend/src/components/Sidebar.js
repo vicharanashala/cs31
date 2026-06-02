@@ -87,7 +87,7 @@ function Sidebar() {
       icon: '💬'
     },
     {
-      name: 'Post Questions',
+      name: 'Discussion Space',
       path: '/questions',
       icon: '❓'
     },

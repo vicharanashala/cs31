@@ -142,7 +142,7 @@ router.post('/ask', auth, async (req, res) => {
     } else {
       res.json({
         ok: false,
-        answer: "I couldn't find a direct FAQ answer for that in our directory. \n\nFeel free to go to the **Post Questions** tab and post your question there. Our team and other students will reply, and if approved, it could be added to our official FAQ index!"
+        answer: "I couldn't find a direct FAQ answer for that in our directory. \n\nFeel free to go to the **Discussion Space** tab and post your question there. Our team and other students will reply, and if approved, it could be added to our official FAQ index!"
       });
     }
   } catch (err) {

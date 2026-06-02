@@ -607,7 +607,7 @@ function Questions() {
 
         {/* Question Feed cards */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {getDisplayedQuestions().map((q) => (
+          {getDisplayedQuestions().filter(q => isAdmin || (!q.isDeletedByAdmin && !q.isDeleted)).map((q) => (
             <div key={q._id} id={`question-card-${q._id}`} style={{
               background: C.surface,
               border: `1px solid ${C.border}`,
@@ -616,7 +616,7 @@ function Questions() {
               transition: 'all 0.4s ease',
               position: 'relative'
             }}>
-              {isAdmin && (
+              {isAdmin && !q.isDeleted && !q.isDeletedByAdmin && (
                 <div style={{
                   position: 'absolute',
                   top: '1.25rem',
@@ -679,7 +679,7 @@ function Questions() {
                   </button>
                 </div>
               )}
-              {!isAdmin && q.createdBy && (q.createdBy._id === (user.id || user._id) || q.createdBy === (user.id || user._id)) && (
+              {!isAdmin && !q.isDeleted && !q.isDeletedByAdmin && q.createdBy && (q.createdBy._id === (user.id || user._id) || q.createdBy === (user.id || user._id)) && (
                 <div style={{
                   position: 'absolute',
                   top: '1.25rem',
@@ -713,30 +713,34 @@ function Questions() {
               <div style={{ padding: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
                 
                 {/* Voting Controls column */}
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: '36px' }}>
-                  <VoteBtn
-                    active={hasUpvoted(q)}
-                    onClick={() => handleUpvote(q._id)}
-                    label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
-                    filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>}
-                    activeColor="#22c55e"
-                  />
-                  <span style={{
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    margin: '2px 0',
-                    color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? "#22c55e" : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? "#ef4444" : C.muted
-                  }}>
-                    {(q.upvoteCount || 0) - (q.downvoteCount || 0)}
-                  </span>
-                  <VoteBtn
-                    active={hasDownvoted(q)}
-                    onClick={() => handleDownvote(q._id)}
-                    label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
-                    filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>}
-                    activeColor="#ef4444"
-                  />
-                </div>
+                {!q.isDeleted && !q.isDeletedByAdmin ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', minWidth: '36px' }}>
+                    <VoteBtn
+                      active={hasUpvoted(q)}
+                      onClick={() => handleUpvote(q._id)}
+                      label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
+                      filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>}
+                      activeColor="#22c55e"
+                    />
+                    <span style={{
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      margin: '2px 0',
+                      color: ((q.upvoteCount || 0) - (q.downvoteCount || 0)) > 0 ? "#22c55e" : ((q.upvoteCount || 0) - (q.downvoteCount || 0)) < 0 ? "#ef4444" : C.muted
+                    }}>
+                      {(q.upvoteCount || 0) - (q.downvoteCount || 0)}
+                    </span>
+                    <VoteBtn
+                      active={hasDownvoted(q)}
+                      onClick={() => handleDownvote(q._id)}
+                      label={<svg width="12" height="10" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>}
+                      filledLabel={<svg width="12" height="10" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>}
+                      activeColor="#ef4444"
+                    />
+                  </div>
+                ) : (
+                  <div style={{ minWidth: '36px' }} />
+                )}
 
                 {/* Content Area */}
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -768,7 +772,23 @@ function Questions() {
                     margin: '0 0 0.75rem 0',
                     lineHeight: 1.5
                   }}>
-                    {q.question}
+                    {q.isDeletedByAdmin ? (
+                      <>
+                        <span style={{ color: C.danger, fontWeight: 700, marginRight: '0.4rem' }}>[Deleted by Admin]</span>
+                        <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{q.question}</span>
+                      </>
+                    ) : q.isDeleted ? (
+                      isAdmin ? (
+                        <>
+                          <span style={{ color: C.danger, fontWeight: 700, marginRight: '0.4rem' }}>[Deleted by Author]</span>
+                          <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{q.question}</span>
+                        </>
+                      ) : (
+                        <span style={{ color: C.muted, fontStyle: 'italic', fontWeight: 500 }}>This message was deleted by author</span>
+                      )
+                    ) : (
+                      q.question
+                    )}
                   </p>
 
                   {/* Metadata line */}
@@ -802,367 +822,399 @@ function Questions() {
                     <span style={{ color: C.accent }}>
                       {q.replies?.length || 0} {q.replies?.length === 1 ? 'reply' : 'replies'}
                     </span>
-                    <span>•</span>
-                    <button
-                      onClick={() => setReportingItem({ type: 'question', id: q._id })}
-                      style={{
-                        background: 'transparent',
-                        border: 'none',
-                        color: C.danger,
-                        fontSize: '0.75rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '2px',
-                        padding: 0,
-                        fontWeight: 500,
-                        transition: 'opacity 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.target.style.opacity = 0.8}
-                      onMouseLeave={(e) => e.target.style.opacity = 1}
-                    >
-                      ⚠️ Report
-                    </button>
+                    {!q.isDeleted && !q.isDeletedByAdmin && (
+                      <>
+                        <span>•</span>
+                        <button
+                          onClick={() => setReportingItem({ type: 'question', id: q._id })}
+                          style={{
+                            background: 'transparent',
+                            border: 'none',
+                            color: C.danger,
+                            fontSize: '0.75rem',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            padding: 0,
+                            fontWeight: 500,
+                            transition: 'opacity 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.target.style.opacity = 0.8}
+                          onMouseLeave={(e) => e.target.style.opacity = 1}
+                        >
+                          ⚠️ Report
+                        </button>
+                      </>
+                    )}
                   </div>
 
                 </div>
               </div>
 
               {/* Nested Replies */}
-              {q.replies && q.replies.length > 0 && (
-                <div style={{
-                  borderTop: `1px solid ${C.border}`,
-                  background: 'var(--bg-main)',
-                  padding: '1.25rem 1.5rem 1.25rem calc(1.5rem + 36px + 1.25rem)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.75rem'
-                }}>
-                  {sortedReplies(q.replies).map((reply) => (
-                    <div key={reply._id} style={{
-                      background: reply.isSolution ? 'rgba(52,211,153,0.04)' : C.surface2,
-                      border: `1px solid ${reply.isSolution ? 'rgba(52,211,153,0.25)' : C.border}`,
-                      borderRadius: '10px',
-                      padding: '0.85rem 1.1rem',
-                      boxSizing: 'border-box',
-                      position: 'relative'
+              {q.replies && q.replies.length > 0 && (isAdmin || !q.isDeleted) && (
+                (() => {
+                  const visibleReplies = sortedReplies(q.replies).filter(reply => isAdmin || !reply.isDeletedByAdmin);
+                  if (visibleReplies.length === 0) return null;
+                  return (
+                    <div style={{
+                      borderTop: `1px solid ${C.border}`,
+                      background: 'var(--bg-main)',
+                      padding: '1.25rem 1.5rem 1.25rem calc(1.5rem + 36px + 1.25rem)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem'
                     }}>
-                      {isAdmin && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '0.75rem',
-                          right: '0.75rem',
-                          zIndex: 10
+                      {visibleReplies.map((reply) => (
+                        <div key={reply._id} style={{
+                          background: reply.isSolution ? 'rgba(52,211,153,0.04)' : C.surface2,
+                          border: `1px solid ${reply.isSolution ? 'rgba(52,211,153,0.25)' : C.border}`,
+                          borderRadius: '10px',
+                          padding: '0.85rem 1.1rem',
+                          boxSizing: 'border-box',
+                          position: 'relative'
                         }}>
-                          <button
-                            onClick={() => setEditItemModal({ type: 'reply', id: reply._id, qId: q._id, text: reply.text })}
-                            style={{
-                              background: 'transparent',
-                              border: `1px solid ${C.accent2}`,
-                              color: C.accent2,
-                              borderRadius: '6px',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'rgba(6,182,212,0.08)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                          >
-                            ✏️ Edit
-                          </button>
-                        </div>
-                      )}
-                      {!isAdmin && reply.createdBy && (reply.createdBy._id === (user.id || user._id) || reply.createdBy === (user.id || user._id)) && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '0.75rem',
-                          right: '0.75rem',
-                          zIndex: 10
-                        }}>
-                          <button
-                            onClick={() => handleDeleteItem({ type: 'reply', id: reply._id, qId: q._id })}
-                            style={{
-                              background: 'transparent',
-                              border: `1px solid ${C.danger}`,
-                              color: C.danger,
-                              borderRadius: '6px',
-                              padding: '0.25rem 0.5rem',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '3px',
-                              transition: 'all 0.2s'
-                            }}
-                            onMouseEnter={(e) => e.target.style.background = 'var(--danger-soft)'}
-                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
-                          >
-                            🗑️ Delete
-                          </button>
-                        </div>
-                      )}
-                      {/* Solution Banner */}
-                      {reply.isSolution && (
-                        <div style={{
-                          fontSize: '0.68rem',
-                          fontWeight: 800,
-                          color: C.success,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.08em',
-                          marginBottom: '0.4rem',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '0.35rem'
-                        }}>
-                          ✓ Verified Solution
-                          {reply.markedSolutionBy && (
-                            <span style={{ color: C.muted, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
-                              • marked by {reply.markedSolutionBy?.name || 'Unknown'} {reply.markedSolutionBy?.role === 'admin' ? '(Admin)' : ''}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      
-                      <p style={{
-                        fontSize: '0.85rem',
-                        color: C.text,
-                        margin: 0,
-                        lineHeight: 1.5,
-                        whiteSpace: 'pre-wrap'
-                      }}>
-                        {reply.text}
-                      </p>
-
-                      {/* Reply Metadata & Votes */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: C.muted }}>
-                        <span style={{ fontWeight: 600, color: 'var(--text-muted2)' }}>by {reply.createdBy?.name || 'Unknown'}</span>
-                        {(() => {
-                          const b = getUserBadge(reply.createdBy);
-                          return (
-                            <span style={{
-                              background: b.bg,
-                              color: b.color,
-                              border: `1px solid ${b.border}`,
-                              borderRadius: '4px',
-                              padding: '1px 5px',
-                              fontSize: '0.62rem',
-                              fontWeight: 700,
-                              textTransform: 'uppercase',
-                              letterSpacing: '0.04em'
+                          {isAdmin && !reply.isDeleted && !reply.isDeletedByAdmin && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '0.75rem',
+                              right: '0.75rem',
+                              zIndex: 10
                             }}>
-                              {b.name}
-                            </span>
-                          );
-                        })()}
-                        <span>•</span>
-                        
-                        {/* Reply Upvote */}
-                        <button
-                          onClick={() => handleReplyVote(q._id, reply._id, 'upvote')}
-                          style={{
-                            background: hasReplyUpvoted(reply) ? 'rgba(34,197,94,0.15)' : 'transparent',
-                            border: `1px solid ${hasReplyUpvoted(reply) ? '#22c55e' : C.border}`,
-                            color: hasReplyUpvoted(reply) ? '#22c55e' : C.muted,
-                            borderRadius: '5px',
-                            padding: '2px 8px',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            transition: 'all 0.15s',
-                            boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(34,197,94,0.2)' : 'none'
-                          }}
-                        >
-                          {hasReplyUpvoted(reply)
-                            ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>
-                            : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
-                          } {reply.upvoteCount || 0}
-                        </button>
+                              <button
+                                onClick={() => setEditItemModal({ type: 'reply', id: reply._id, qId: q._id, text: reply.text })}
+                                style={{
+                                  background: 'transparent',
+                                  border: `1px solid ${C.accent2}`,
+                                  color: C.accent2,
+                                  borderRadius: '6px',
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = 'rgba(6,182,212,0.08)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                              >
+                                ✏️ Edit
+                              </button>
+                            </div>
+                          )}
+                          {!isAdmin && !reply.isDeleted && !reply.isDeletedByAdmin && reply.createdBy && (reply.createdBy._id === (user.id || user._id) || reply.createdBy === (user.id || user._id)) && (
+                            <div style={{
+                              position: 'absolute',
+                              top: '0.75rem',
+                              right: '0.75rem',
+                              zIndex: 10
+                            }}>
+                              <button
+                                onClick={() => handleDeleteItem({ type: 'reply', id: reply._id, qId: q._id })}
+                                style={{
+                                  background: 'transparent',
+                                  border: `1px solid ${C.danger}`,
+                                  color: C.danger,
+                                  borderRadius: '6px',
+                                  padding: '0.25rem 0.5rem',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '3px',
+                                  transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.target.style.background = 'var(--danger-soft)'}
+                                onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                              >
+                                🗑️ Delete
+                              </button>
+                            </div>
+                          )}
+                          {/* Solution Banner */}
+                          {reply.isSolution && !reply.isDeleted && !reply.isDeletedByAdmin && (
+                            <div style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              color: C.success,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              marginBottom: '0.4rem',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.35rem'
+                            }}>
+                              ✓ Verified Solution
+                              {reply.markedSolutionBy && (
+                                <span style={{ color: C.muted, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>
+                                  • marked by {reply.markedSolutionBy?.name || 'Unknown'} {reply.markedSolutionBy?.role === 'admin' ? '(Admin)' : ''}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          
+                          <p style={{
+                            fontSize: '0.85rem',
+                            color: C.text,
+                            margin: 0,
+                            lineHeight: 1.5,
+                            whiteSpace: 'pre-wrap'
+                          }}>
+                            {reply.isDeletedByAdmin ? (
+                              <>
+                                <span style={{ color: C.danger, fontWeight: 700, marginRight: '0.4rem' }}>[Deleted by Admin]</span>
+                                <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{reply.text}</span>
+                              </>
+                            ) : reply.isDeleted ? (
+                              isAdmin ? (
+                                <>
+                                  <span style={{ color: C.danger, fontWeight: 700, marginRight: '0.4rem' }}>[Deleted by Author]</span>
+                                  <span style={{ textDecoration: 'line-through', opacity: 0.6 }}>{reply.text}</span>
+                                </>
+                              ) : (
+                                <span style={{ color: C.muted, fontStyle: 'italic', fontWeight: 500 }}>This message was deleted by author</span>
+                              )
+                            ) : (
+                              reply.text
+                            )}
+                          </p>
 
-                        {/* Reply Downvote */}
-                        <button
-                          onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
-                          style={{
-                            background: hasReplyDownvoted(reply) ? 'rgba(239,68,68,0.15)' : 'transparent',
-                            border: `1px solid ${hasReplyDownvoted(reply) ? '#ef4444' : C.border}`,
-                            color: hasReplyDownvoted(reply) ? '#ef4444' : C.muted,
-                            borderRadius: '5px',
-                            padding: '2px 8px',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            transition: 'all 0.15s',
-                            boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(239,68,68,0.2)' : 'none'
-                          }}
-                        >
-                          {hasReplyDownvoted(reply)
-                            ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>
-                            : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
-                          } {reply.downvoteCount || 0}
-                        </button>
-                        
-                        <button
-                          onClick={() => setReportingItem({ type: 'reply', id: reply._id, qId: q._id })}
-                          style={{
-                            background: 'transparent',
-                            border: `1px solid ${C.border}`,
-                            color: C.danger,
-                            borderRadius: '5px',
-                            padding: '2px 8px',
-                            fontSize: '0.7rem',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '3px',
-                            transition: 'all 0.15s'
-                          }}
-                          onMouseEnter={(e) => { e.target.style.borderColor = C.danger; }}
-                          onMouseLeave={(e) => { e.target.style.borderColor = C.border; }}
-                        >
-                          ⚠️ Report
-                        </button>
+                          {/* Reply Metadata & Votes */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.75rem', flexWrap: 'wrap', fontSize: '0.72rem', color: C.muted }}>
+                            <span style={{ fontWeight: 600, color: 'var(--text-muted2)' }}>by {reply.createdBy?.name || 'Unknown'}</span>
+                            {(() => {
+                              const b = getUserBadge(reply.createdBy);
+                              return (
+                                <span style={{
+                                  background: b.bg,
+                                  color: b.color,
+                                  border: `1px solid ${b.border}`,
+                                  borderRadius: '4px',
+                                  padding: '1px 5px',
+                                  fontSize: '0.62rem',
+                                  fontWeight: 700,
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.04em'
+                                }}>
+                                  {b.name}
+                                </span>
+                              );
+                            })()}
+                            {!reply.isDeleted && !reply.isDeletedByAdmin && (
+                              <>
+                                <span>•</span>
+                                
+                                {/* Reply Upvote */}
+                                <button
+                                  onClick={() => handleReplyVote(q._id, reply._id, 'upvote')}
+                                  style={{
+                                    background: hasReplyUpvoted(reply) ? 'rgba(34,197,94,0.15)' : 'transparent',
+                                    border: `1px solid ${hasReplyUpvoted(reply) ? '#22c55e' : C.border}`,
+                                    color: hasReplyUpvoted(reply) ? '#22c55e' : C.muted,
+                                    borderRadius: '5px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    transition: 'all 0.15s',
+                                    boxShadow: hasReplyUpvoted(reply) ? '0 0 8px rgba(34,197,94,0.2)' : 'none'
+                                  }}
+                                >
+                                  {hasReplyUpvoted(reply)
+                                    ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 1L1 9h10L6 1z" fill="currentColor"/></svg>
+                                    : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 1L1 9h10L6 1z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
+                                  } {reply.upvoteCount || 0}
+                                </button>
 
-                        {/* Mark Solution Action */}
-                        {canMarkSolution(q) && !reply.isSolution && !q.replies.some(r => r.isSolution) && (
-                          <button
-                            onClick={() => handleMarkSolution(q._id, reply._id)}
-                            style={{
-                              marginLeft: 'auto',
-                              background: 'transparent',
-                              border: `1px solid ${C.accent}`,
-                              color: C.accent,
-                              borderRadius: '5px',
-                              padding: '2px 8px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.15)'; }}
-                            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-                          >
-                            Mark Solution
-                          </button>
-                        )}
-                        
-                        {canUnmarkSolution(q) && reply.isSolution && (
-                          <button
-                            onClick={() => handleMarkSolution(q._id, reply._id)} // Toggle route behaves like unmark when called on active solution
-                            style={{
-                              marginLeft: 'auto',
-                              background: 'transparent',
-                              border: `1px solid ${C.danger}`,
-                              color: C.danger,
-                              borderRadius: '5px',
-                              padding: '2px 8px',
-                              fontSize: '0.7rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              transition: 'all 0.15s'
-                            }}
-                            onMouseEnter={(e) => { e.target.style.background = 'rgba(248, 113, 113, 0.15)'; }}
-                            onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-                          >
-                            Unmark Solution
-                          </button>
-                        )}
-                      </div>
+                                {/* Reply Downvote */}
+                                <button
+                                  onClick={() => handleReplyVote(q._id, reply._id, 'downvote')}
+                                  style={{
+                                    background: hasReplyDownvoted(reply) ? 'rgba(239,68,68,0.15)' : 'transparent',
+                                    border: `1px solid ${hasReplyDownvoted(reply) ? '#ef4444' : C.border}`,
+                                    color: hasReplyDownvoted(reply) ? '#ef4444' : C.muted,
+                                    borderRadius: '5px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    transition: 'all 0.15s',
+                                    boxShadow: hasReplyDownvoted(reply) ? '0 0 8px rgba(239,68,68,0.2)' : 'none'
+                                  }}
+                                >
+                                  {hasReplyDownvoted(reply)
+                                    ? <svg width="10" height="9" viewBox="0 0 12 10"><path d="M6 9L1 1h10L6 9z" fill="currentColor"/></svg>
+                                    : <svg width="10" height="9" viewBox="0 0 12 10" fill="none"><path d="M6 9L1 1h10L6 9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" fill="none"/></svg>
+                                  } {reply.downvoteCount || 0}
+                                </button>
+                                
+                                <button
+                                  onClick={() => setReportingItem({ type: 'reply', id: reply._id, qId: q._id })}
+                                  style={{
+                                    background: 'transparent',
+                                    border: `1px solid ${C.border}`,
+                                    color: C.danger,
+                                    borderRadius: '5px',
+                                    padding: '2px 8px',
+                                    fontSize: '0.7rem',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '3px',
+                                    transition: 'all 0.15s'
+                                  }}
+                                  onMouseEnter={(e) => { e.target.style.borderColor = C.danger; }}
+                                  onMouseLeave={(e) => { e.target.style.borderColor = C.border; }}
+                                >
+                                  ⚠️ Report
+                                </button>
+
+                                {/* Mark Solution Action */}
+                                {canMarkSolution(q) && !reply.isSolution && !q.replies.some(r => r.isSolution) && (
+                                  <button
+                                    onClick={() => handleMarkSolution(q._id, reply._id)}
+                                    style={{
+                                      marginLeft: 'auto',
+                                      background: 'transparent',
+                                      border: `1px solid ${C.accent}`,
+                                      color: C.accent,
+                                      borderRadius: '5px',
+                                      padding: '2px 8px',
+                                      fontSize: '0.7rem',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => { e.target.style.background = 'rgba(124, 106, 245, 0.15)'; }}
+                                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                                  >
+                                    Mark Solution
+                                  </button>
+                                )}
+                                
+                                {canUnmarkSolution(q) && reply.isSolution && (
+                                  <button
+                                    onClick={() => handleMarkSolution(q._id, reply._id)}
+                                    style={{
+                                      marginLeft: 'auto',
+                                      background: 'transparent',
+                                      border: `1px solid ${C.danger}`,
+                                      color: C.danger,
+                                      borderRadius: '5px',
+                                      padding: '2px 8px',
+                                      fontSize: '0.7rem',
+                                      fontWeight: 600,
+                                      cursor: 'pointer',
+                                      transition: 'all 0.15s'
+                                    }}
+                                    onMouseEnter={(e) => { e.target.style.background = 'rgba(248, 113, 113, 0.15)'; }}
+                                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                                  >
+                                    Unmark Solution
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  );
+                })()
               )}
 
               {/* Add Reply field */}
-              <div style={{
-                borderTop: `1px solid ${C.border}`,
-                padding: '0.85rem 1.5rem',
-                display: 'flex',
-                gap: '0.75rem',
-                background: 'var(--bg-surface2)'
-              }}>
-                {showReply[q._id] ? (
-                  <>
-                    <input
-                      type="text"
-                      value={replyTexts[q._id] || ''}
-                      onChange={(e) => setReplyTexts({ ...replyTexts, [q._id]: e.target.value })}
-                      placeholder="Type your reply to this question..."
-                      style={{
-                        flex: 1,
-                        background: 'var(--bg-main)',
-                        border: `1px solid ${C.border}`,
-                        borderRadius: '8px',
-                        color: C.text,
-                        padding: '0.5rem 0.85rem',
-                        fontSize: '0.85rem',
-                        outline: 'none',
-                        fontFamily: 'inherit'
-                      }}
-                      onFocus={(e) => e.target.style.borderColor = C.accent}
-                      onBlur={(e) => e.target.style.borderColor = C.border}
-                      onKeyDown={(e) => { if (e.key === 'Enter') handleReply(q._id); }}
-                    />
+              {!q.isDeleted && !q.isDeletedByAdmin && (
+                <div style={{
+                  borderTop: `1px solid ${C.border}`,
+                  padding: '0.85rem 1.5rem',
+                  display: 'flex',
+                  gap: '0.75rem',
+                  background: 'var(--bg-surface2)'
+                }}>
+                  {showReply[q._id] ? (
+                    <>
+                      <input
+                        type="text"
+                        value={replyTexts[q._id] || ''}
+                        onChange={(e) => setReplyTexts({ ...replyTexts, [q._id]: e.target.value })}
+                        placeholder="Type your reply to this question..."
+                        style={{
+                          flex: 1,
+                          background: 'var(--bg-main)',
+                          border: `1px solid ${C.border}`,
+                          borderRadius: '8px',
+                          color: C.text,
+                          padding: '0.5rem 0.85rem',
+                          fontSize: '0.85rem',
+                          outline: 'none',
+                          fontFamily: 'inherit'
+                        }}
+                        onFocus={(e) => e.target.style.borderColor = C.accent}
+                        onBlur={(e) => e.target.style.borderColor = C.border}
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleReply(q._id); }}
+                      />
+                      <button
+                        onClick={() => handleReply(q._id)}
+                        disabled={!(replyTexts[q._id] || '').trim()}
+                        style={{
+                          background: (replyTexts[q._id] || '').trim() ? C.accent : 'var(--bg-surface2)',
+                          color: (replyTexts[q._id] || '').trim() ? '#fff' : 'var(--text-muted)',
+                          border: `1px solid ${C.border}`,
+                          borderRadius: '8px',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.82rem',
+                          fontWeight: 600,
+                          cursor: (replyTexts[q._id] || '').trim() ? 'pointer' : 'not-allowed'
+                        }}
+                      >
+                        Reply
+                      </button>
+                      <button
+                        onClick={() => setShowReply({ ...showReply, [q._id]: false })}
+                        style={{
+                          background: 'transparent',
+                          color: C.muted,
+                          border: `1px solid ${C.border}`,
+                          borderRadius: '8px',
+                          padding: '0.5rem 0.85rem',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
                     <button
-                      onClick={() => handleReply(q._id)}
-                      disabled={!(replyTexts[q._id] || '').trim()}
-                      style={{
-                        background: (replyTexts[q._id] || '').trim() ? C.accent : 'var(--bg-surface2)',
-                        color: (replyTexts[q._id] || '').trim() ? '#fff' : 'var(--text-muted)',
-                        border: `1px solid ${C.border}`,
-                        borderRadius: '8px',
-                        padding: '0.5rem 1rem',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: (replyTexts[q._id] || '').trim() ? 'pointer' : 'not-allowed'
-                      }}
-                    >
-                      Reply
-                    </button>
-                    <button
-                      onClick={() => setShowReply({ ...showReply, [q._id]: false })}
+                      onClick={() => setShowReply({ ...showReply, [q._id]: true })}
                       style={{
                         background: 'transparent',
                         color: C.muted,
                         border: `1px solid ${C.border}`,
                         borderRadius: '8px',
-                        padding: '0.5rem 0.85rem',
-                        fontSize: '0.82rem',
-                        cursor: 'pointer'
+                        padding: '0.45rem 1.1rem',
+                        fontSize: '0.8rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s'
                       }}
+                      onMouseEnter={(e) => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; }}
+                      onMouseLeave={(e) => { e.target.style.borderColor = C.border; e.target.style.color = C.muted; }}
                     >
-                      Cancel
+                      + Add reply
                     </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => setShowReply({ ...showReply, [q._id]: true })}
-                    style={{
-                      background: 'transparent',
-                      color: C.muted,
-                      border: `1px solid ${C.border}`,
-                      borderRadius: '8px',
-                      padding: '0.45rem 1.1rem',
-                      fontSize: '0.8rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s'
-                    }}
-                    onMouseEnter={(e) => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; }}
-                    onMouseLeave={(e) => { e.target.style.borderColor = C.border; e.target.style.color = C.muted; }}
-                  >
-                    + Add reply
-                  </button>
-                )}
-              </div>
+                  )}
+                </div>
+              )}
 
             </div>
           ))}

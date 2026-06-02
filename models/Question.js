@@ -55,7 +55,15 @@ const ReplySchema = new mongoose.Schema({
     },
     reason: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  isDeletedByAdmin: {
+    type: Boolean,
+    default: false
+  }
 });
 
 const QuestionSchema = new mongoose.Schema({
@@ -130,7 +138,15 @@ const QuestionSchema = new mongoose.Schema({
     },
     reason: { type: String, trim: true },
     createdAt: { type: Date, default: Date.now }
-  }]
+  }],
+  isDeleted: {
+    type: Boolean,
+    default: false
+  },
+  isDeletedByAdmin: {
+    type: Boolean,
+    default: false
+  }
 }, {
   timestamps: true
 });

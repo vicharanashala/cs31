@@ -501,7 +501,9 @@ router.get('/faq-requests', auth, async (req, res) => {
     
     const questions = await Question.find({
       upvoteCount: { $gte: 20 },
-      promotedToFAQ: 'none'
+      promotedToFAQ: 'none',
+      isDeleted: { $ne: true },
+      isDeletedByAdmin: { $ne: true }
     })
       .populate('createdBy', 'name email role spurtiPoints')
       .populate('replies.createdBy', 'name email role spurtiPoints')
@@ -635,10 +637,11 @@ router.delete('/:id', auth, async (req, res) => {
     }
 
     if (isAdmin) {
-      await Question.findByIdAndDelete(req.params.id);
-      res.json({ message: 'Question deleted successfully' });
+      question.isDeletedByAdmin = true;
+      await question.save();
+      res.json({ message: 'Question deleted successfully by admin' });
     } else {
-      question.question = 'This message was deleted by author';
+      question.isDeleted = true;
       await question.save();
       res.json({ message: 'Question deleted and marked by author' });
     }
@@ -670,8 +673,8 @@ router.get('/reported', auth, async (req, res) => {
     const reportedItems = [];
 
     questions.forEach(q => {
-      // If the question itself is reported
-      if (q.reports && q.reports.length > 0) {
+      // If the question itself is reported and not deleted
+      if (q.reports && q.reports.length > 0 && !q.isDeleted && !q.isDeletedByAdmin) {
         reportedItems.push({
           id: q._id,
           type: 'question',
@@ -690,7 +693,7 @@ router.get('/reported', auth, async (req, res) => {
 
       // Check replies
       q.replies.forEach(reply => {
-        if (reply.reports && reply.reports.length > 0) {
+        if (reply.reports && reply.reports.length > 0 && !reply.isDeleted && !reply.isDeletedByAdmin) {
           reportedItems.push({
             id: reply._id,
             questionId: q._id,
@@ -853,11 +856,11 @@ router.delete('/:id/replies/:replyId', auth, async (req, res) => {
     }
 
     if (isAdmin) {
-      question.replies.pull(req.params.replyId);
+      reply.isDeletedByAdmin = true;
       await question.save();
-      res.json({ message: 'Reply deleted successfully' });
+      res.json({ message: 'Reply deleted successfully by admin' });
     } else {
-      reply.text = 'This message was deleted by author';
+      reply.isDeleted = true;
       await question.save();
       res.json({ message: 'Reply deleted and marked by author' });
     }

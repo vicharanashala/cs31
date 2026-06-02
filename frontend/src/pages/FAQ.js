@@ -16,6 +16,7 @@ function FAQ() {
   // Simulated state for helpful counts and clicked status
   const [helpfulVotes, setHelpfulVotes] = useState({});
   const [helpfulClicked, setHelpfulClicked] = useState({});
+  const [confirmAction, setConfirmAction] = useState(null); // { label, message, onConfirm }
 
   const highlightedFaqId = searchParams.get('faq');
 
@@ -62,17 +63,22 @@ function FAQ() {
     fetchFAQs();
   }, [selectedSection, search, highlightedFaqId]);
 
-  const handleDelete = async (id, e) => {
+  const handleDelete = (id, e) => {
     e.stopPropagation();
-    if (!window.confirm('Delete this FAQ?')) return;
-    try {
-      await axios.delete(`/api/faqs/${id}`, { headers: { 'x-auth-token': token } });
-      setMessage('FAQ deleted successfully.');
-      fetchFAQs();
-    } catch (err) {
-      setMessage('Error deleting FAQ');
-    }
-    setTimeout(() => setMessage(''), 3000);
+    setConfirmAction({
+      label: 'Delete',
+      message: 'Are you sure you want to delete this FAQ? This action cannot be undone.',
+      onConfirm: async () => {
+        try {
+          await axios.delete(`/api/faqs/${id}`, { headers: { 'x-auth-token': token } });
+          setMessage('FAQ deleted successfully.');
+          fetchFAQs();
+        } catch (err) {
+          setMessage('Error deleting FAQ');
+        }
+        setTimeout(() => setMessage(''), 3000);
+      }
+    });
   };
 
   const handleSearchChange = (e) => {
@@ -503,6 +509,74 @@ function FAQ() {
           })
         )}
       </div>
+
+      {/* Inline confirmation modal */}
+      {confirmAction && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(7, 7, 12, 0.6)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border-card)',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '400px',
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
+          }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'var(--text-white)' }}>
+              Confirm {confirmAction.label}
+            </h3>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted2)', marginBottom: '2rem', lineHeight: 1.5 }}>
+              {confirmAction.message}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+              <button
+                onClick={() => setConfirmAction(null)}
+                style={{
+                  padding: '0.6rem 1.5rem',
+                  borderRadius: '8px',
+                  border: '1px solid var(--border-card)',
+                  background: 'var(--bg-hover)',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 600
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => { confirmAction.onConfirm(); setConfirmAction(null); }}
+                style={{
+                  padding: '0.6rem 1.5rem',
+                  borderRadius: '8px',
+                  border: 'none',
+                  background: 'var(--danger)',
+                  color: '#fff',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 600
+                }}
+              >
+                {confirmAction.label}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

@@ -1,0 +1,83 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import FAQ from './pages/FAQ';
+import Questions from './pages/Questions';
+import AdminDashboard from './pages/AdminDashboard';
+import AiSupport from './pages/AiSupport';
+import Notifications from './pages/Notifications';
+import Leaderboards from './pages/Leaderboards';
+import EditProfile from './pages/EditProfile';
+import DashboardLayout from './components/DashboardLayout';
+import './App.css';
+
+function PrivateRoute({ children }) {
+  const token = localStorage.getItem('token');
+  return token ? children : <Navigate to="/login" />;
+}
+
+function App() {
+  return (
+    <Router>
+      <div className="app">
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
+          <Route path="/faqs" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <FAQ />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/questions" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Questions />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/ai-support" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <AiSupport />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/notifications" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Notifications />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/leaderboard" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <Leaderboards />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/edit-profile" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <EditProfile />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/admin" element={
+            <PrivateRoute>
+              <DashboardLayout>
+                <AdminDashboard />
+              </DashboardLayout>
+            </PrivateRoute>
+          } />
+          <Route path="/" element={<Navigate to="/login" />} />
+        </Routes>
+      </div>
+    </Router>
+  );
+}
+
+export default App;

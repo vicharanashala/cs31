@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 
 function AiSupport() {
-  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
@@ -69,7 +67,8 @@ function AiSupport() {
           id: (Date.now() + 1).toString(),
           sender: 'bot',
           text: replyText,
-          showPostButton
+          showPostButton,
+          userQuery: userMsgText
         }
       ]);
     } catch (err) {
@@ -84,6 +83,30 @@ function AiSupport() {
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAutoPost = async (userQuery, msgId) => {
+    try {
+      const config = { headers: { 'x-auth-token': token } };
+      await axios.post('/api/questions', { question: userQuery, confirmSimilar: true }, config);
+      
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === msgId
+            ? { ...msg, showPostButton: false, postSuccess: true }
+            : msg
+        )
+      );
+    } catch (err) {
+      console.error('Error auto-posting question:', err);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === msgId
+            ? { ...msg, showPostButton: false, postError: err.response?.data?.message || 'Error occurred while posting.' }
+            : msg
+        )
+      );
     }
   };
 
@@ -177,29 +200,83 @@ function AiSupport() {
               })}
             </div>
             {msg.showPostButton && (
-              <button
-                onClick={() => navigate('/questions')}
-                style={{
-                  marginTop: '0.5rem',
-                  background: 'transparent',
-                  border: '1px solid var(--accent)',
-                  color: 'var(--accent)',
-                  borderRadius: '8px',
-                  padding: '0.45rem 1rem',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s',
-                  outline: 'none',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem'
-                }}
-                onMouseEnter={(e) => { e.target.style.background = 'var(--bg-active)'; }}
-                onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
-              >
-                ❓ Go to Post Questions Page
-              </button>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem', width: '100%', maxWidth: '75%' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  Would you like to post this question to the community feed automatically?
+                </span>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={() => handleAutoPost(msg.userQuery, msg.id)}
+                    style={{
+                      background: 'var(--accent)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '0.45rem 1rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseEnter={(e) => { e.target.style.background = 'var(--accent-hover)'; }}
+                    onMouseLeave={(e) => { e.target.style.background = 'var(--accent)'; }}
+                  >
+                    🚀 Yes, Post it
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMessages((prev) =>
+                        prev.map((m) =>
+                          m.id === msg.id ? { ...m, showPostButton: false } : m
+                        )
+                      );
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: '1px solid var(--border-card)',
+                      color: 'var(--text-muted)',
+                      borderRadius: '8px',
+                      padding: '0.45rem 1rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      outline: 'none'
+                    }}
+                    onMouseEnter={(e) => { e.target.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            )}
+            {msg.postSuccess && (
+              <div style={{
+                marginTop: '0.5rem',
+                color: 'var(--success)',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}>
+                ✅ Question posted to community feed successfully!
+              </div>
+            )}
+            {msg.postError && (
+              <div style={{
+                marginTop: '0.5rem',
+                color: 'var(--danger)',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.25rem'
+              }}>
+                ❌ Failed to post: {msg.postError}
+              </div>
             )}
           </div>
         ))}

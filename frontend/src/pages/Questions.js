@@ -679,6 +679,36 @@ function Questions() {
                   </button>
                 </div>
               )}
+              {!isAdmin && q.createdBy && (q.createdBy._id === (user.id || user._id) || q.createdBy === (user.id || user._id)) && (
+                <div style={{
+                  position: 'absolute',
+                  top: '1.25rem',
+                  right: '1.25rem',
+                  zIndex: 10
+                }}>
+                  <button
+                    onClick={() => handleDeleteItem({ type: 'question', id: q._id })}
+                    style={{
+                      background: 'transparent',
+                      border: `1px solid ${C.danger}`,
+                      color: C.danger,
+                      borderRadius: '6px',
+                      padding: '0.35rem 0.75rem',
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = 'var(--danger-soft)'}
+                    onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                  >
+                    🗑️ Delete
+                  </button>
+                </div>
+              )}
               {/* Question body card */}
               <div style={{ padding: '1.5rem', display: 'flex', gap: '1.25rem', alignItems: 'flex-start' }}>
                 
@@ -844,6 +874,36 @@ function Questions() {
                             onMouseLeave={(e) => e.target.style.background = 'transparent'}
                           >
                             ✏️ Edit
+                          </button>
+                        </div>
+                      )}
+                      {!isAdmin && reply.createdBy && (reply.createdBy._id === (user.id || user._id) || reply.createdBy === (user.id || user._id)) && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '0.75rem',
+                          right: '0.75rem',
+                          zIndex: 10
+                        }}>
+                          <button
+                            onClick={() => handleDeleteItem({ type: 'reply', id: reply._id, qId: q._id })}
+                            style={{
+                              background: 'transparent',
+                              border: `1px solid ${C.danger}`,
+                              color: C.danger,
+                              borderRadius: '6px',
+                              padding: '0.25rem 0.5rem',
+                              fontSize: '0.7rem',
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              transition: 'all 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.target.style.background = 'var(--danger-soft)'}
+                            onMouseLeave={(e) => e.target.style.background = 'transparent'}
+                          >
+                            🗑️ Delete
                           </button>
                         </div>
                       )}

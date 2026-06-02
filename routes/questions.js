@@ -622,17 +622,26 @@ router.put('/:id', auth, async (req, res) => {
 
 router.delete('/:id', auth, async (req, res) => {
   try {
-    // Allow if role is 'admin' in JWT, or fallback to DB check for older tokens
-    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-    
-    const question = await Question.findByIdAndDelete(req.params.id);
+    const question = await Question.findById(req.params.id);
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
     }
-    
-    res.json({ message: 'Question deleted successfully' });
+
+    const isAdmin = req.user.role === 'admin' || (await Admin.findById(req.user.id));
+    const isAuthor = question.createdBy && question.createdBy.toString() === req.user.id;
+
+    if (!isAdmin && !isAuthor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (isAdmin) {
+      await Question.findByIdAndDelete(req.params.id);
+      res.json({ message: 'Question deleted successfully' });
+    } else {
+      question.question = 'This message was deleted by author';
+      await question.save();
+      res.json({ message: 'Question deleted and marked by author' });
+    }
   } catch (err) {
     res.status(500).json({ message: 'Error deleting question' });
   }
@@ -823,14 +832,9 @@ router.post('/:id/replies/:replyId/dismiss-reports', auth, async (req, res) => {
   }
 });
 
-// DELETE a reply (Admin only)
+// DELETE a reply (Admin or Author)
 router.delete('/:id/replies/:replyId', auth, async (req, res) => {
   try {
-    // Allow if role is 'admin' in JWT, or fallback to DB check for older tokens
-    if (req.user.role !== 'admin' && !(await Admin.findById(req.user.id))) {
-      return res.status(403).json({ message: 'Admin access required' });
-    }
-
     const question = await Question.findById(req.params.id);
     if (!question) {
       return res.status(404).json({ message: 'Question not found' });
@@ -841,10 +845,22 @@ router.delete('/:id/replies/:replyId', auth, async (req, res) => {
       return res.status(404).json({ message: 'Reply not found' });
     }
 
-    question.replies.pull(req.params.replyId);
-    await question.save();
+    const isAdmin = req.user.role === 'admin' || (await Admin.findById(req.user.id));
+    const isAuthor = reply.createdBy && reply.createdBy.toString() === req.user.id;
 
-    res.json({ message: 'Reply deleted successfully' });
+    if (!isAdmin && !isAuthor) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    if (isAdmin) {
+      question.replies.pull(req.params.replyId);
+      await question.save();
+      res.json({ message: 'Reply deleted successfully' });
+    } else {
+      reply.text = 'This message was deleted by author';
+      await question.save();
+      res.json({ message: 'Reply deleted and marked by author' });
+    }
   } catch (err) {
     console.error('Delete Reply Error:', err);
     res.status(500).json({ message: 'Error deleting reply' });

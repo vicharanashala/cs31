@@ -479,7 +479,7 @@ function FAQ() {
                   fontSize: '0.78rem',
                   color: 'var(--text-muted)'
                 }}>
-                  <span>{getViews(faq._id)} views</span>
+                  <span />
 
                   <button
                     onClick={() => handleHelpfulClick(faq._id)}

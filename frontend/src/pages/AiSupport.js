@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function AiSupport() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([
     {
       id: 'welcome',
@@ -53,10 +55,12 @@ function AiSupport() {
       const res = await axios.post('/api/faqs/ask', { question: userMsgText }, config);
       
       let replyText = '';
+      let showPostButton = false;
       if (res.data.ok) {
         replyText = `**Based on FAQ ("${res.data.question}") [Confidence: ${res.data.confidence}%]:**\n\n${res.data.answer}`;
       } else {
         replyText = res.data.answer;
+        showPostButton = true;
       }
 
       setMessages((prev) => [
@@ -64,7 +68,8 @@ function AiSupport() {
         {
           id: (Date.now() + 1).toString(),
           sender: 'bot',
-          text: replyText
+          text: replyText,
+          showPostButton
         }
       ]);
     } catch (err) {
@@ -141,7 +146,8 @@ function AiSupport() {
             key={msg.id}
             style={{
               display: 'flex',
-              justifyContent: msg.sender === 'user' ? 'flex-end' : 'flex-start',
+              flexDirection: 'column',
+              alignItems: msg.sender === 'user' ? 'flex-end' : 'flex-start',
               width: '100%'
             }}
           >
@@ -170,6 +176,31 @@ function AiSupport() {
                 return <p key={i} style={{ margin: i > 0 ? '0.75rem 0 0 0' : 0 }}>{para}</p>;
               })}
             </div>
+            {msg.showPostButton && (
+              <button
+                onClick={() => navigate('/questions')}
+                style={{
+                  marginTop: '0.5rem',
+                  background: 'transparent',
+                  border: '1px solid var(--accent)',
+                  color: 'var(--accent)',
+                  borderRadius: '8px',
+                  padding: '0.45rem 1rem',
+                  fontSize: '0.8rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  outline: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.4rem'
+                }}
+                onMouseEnter={(e) => { e.target.style.background = 'var(--bg-active)'; }}
+                onMouseLeave={(e) => { e.target.style.background = 'transparent'; }}
+              >
+                ❓ Go to Post Questions Page
+              </button>
+            )}
           </div>
         ))}
         {loading && (

@@ -1,8 +1,8 @@
 # Vicharanashala Crowdsourced FAQ & Discussion Space
 
-A modern MERN-stack Q&A and community discussion platform built for **VINS (Vicharanashala Internship)**—a free, open-source online internship run by the **Vicharanashala Lab for Education Design at IIT Ropar**. 
+A modern MERN-stack Q&A, gamified community forum, and moderation platform built for **VINS (Vicharanashala Internship)**—a free, open-source online internship run by the **Vicharanashala Lab for Education Design at IIT Ropar**. 
 
-This platform connects students and administrators, featuring a smart duplicate detection system, a real-time discussion feed, an AI chatbot integration, and powerful admin moderation controls.
+This platform connects students and administrators, featuring a smart duplicate detection system, a real-time discussion feed, an AI chatbot integration, visual analytics, notifications, and gamified points-based progression.
 
 ---
 
@@ -15,8 +15,14 @@ This platform connects students and administrators, featuring a smart duplicate 
 - **Self Soft-Deletion**: Delete your own questions or replies. Deleted replies are replaced with an inline placeholder (`"This message was deleted by author"`), while deleted questions are cleanly hidden from the feed.
 - **Question & Reply Reporting**: Flag inappropriate or incorrect content with custom report reasons.
 - **Solution Marking**: Askers can mark any reply as the "Verified Solution" for their question.
+- **Notification Hub**: A real-time notification panel informing users when their reply is marked as a solution, when their question is promoted to FAQ, or when their Spurti Points balance changes.
+- **Profile Management**: An edit-profile page to update display details and review account metrics.
 
 ### 🛡️ Admin Moderation & Operations
+- **Visual Analytics Dashboard**: Displays interactive bar charts for:
+  - **Most Trending Student Questions**: Ranks the top 5 community questions by upvotes with progress bars indicating relative popularity.
+  - **Category Distribution**: Visualizes the distribution of FAQs across categories to monitor knowledge base coverage.
+  - **Moderation Counters**: Real-time counters for pending FAQ requests and unresolved reports.
 - **Report Moderation Feed**: Review flagged questions and replies in a dedicated "Reports Received" column. Dismiss reports or delete violating content directly.
 - **FAQ Requests Queue**: Automatically capture questions that cross the **20 upvotes threshold** and promote them directly to the FAQ directory with custom answers and categories.
 - **Direct Feed Editing & Publishing**: Edit or delete any question/reply directly from the community feed. Publish community questions directly into the FAQ directory.
@@ -25,6 +31,36 @@ This platform connects students and administrators, featuring a smart duplicate 
 ### 🤖 Smart Chatbot Integration (Mini Yaksha)
 - **Inline Assistant**: Get instant automated replies to internship queries.
 - **Auto-Post Fallback**: If Mini Yaksha is unable to answer a query, it displays an inline button prompt asking: *"Would you like to post this question to the community feed automatically?"*. Clicking it submits the question to the Discussion Space in the background without leaving the chat interface.
+
+---
+
+## 🏆 Gamification Engine (Spurti Points & Roles)
+
+The platform incorporates a gamification system to drive healthy community participation, awarding users **Spurti Points (SP)** and promoting them to higher community roles.
+
+### ⚙️ Points Mechanics
+- **Default Starting Balance**: Every registered user and administrator starts with **10 SP**.
+- **FAQ Promotion**: If an admin promotes a student's question to the FAQ directory, the student receives **+5 SP**.
+- **Verified Solution**: If a student's reply is marked as the verified solution, they receive **+2 SP**.
+- **Solution Unmarked**: If a reply is unmarked as a solution, the author loses **-2 SP** (points cannot drop below 0).
+
+### 🏷️ Points-Based Escalation Roles
+As users accumulate Spurti Points, their community badge updates automatically on all posts, replies, and leaderboard tables:
+- **Student**: `< 200 SP` (Default role badge)
+- **Volunteer**: `200 – 299 SP`
+- **Sub-Coordinator**: `300 – 499 SP`
+- **Coordinator**: `≥ 500 SP`
+
+Administrators are given a dedicated **Admin** badge that bypasses points progression.
+
+---
+
+## 🥇 Double-Sided Leaderboards
+
+The platform features a double-sided leaderboard page located at `/leaderboard` that encourages engagement:
+
+1. **Student Leaderboard**: Displays ranking, masked emails, active role badges, and Spurti Points (SP) of all student accounts. First, second, and third-place ranks are styled with gold (🥇), silver (🥈), and bronze (🥉) medal icons.
+2. **Admin Leaderboard (Admin-Only)**: A leaderboard specifically for administrators to rank admin accounts based on their contributions (answers, moderation, and FAQ publishing). Non-admin users are restricted from viewing this tab to maintain administrative privacy.
 
 ---
 
@@ -50,13 +86,18 @@ Crowdsourced/
 │   ├── public/
 │   └── src/
 │       ├── components/
-│       │   └── Sidebar.js     # Responsive navigation sidebar
+│       │   ├── Navbar.js      # Role-aware nav (Admin badge, logout)
+│       │   ├── Sidebar.js     # Responsive navigation sidebar
+│       │   └── Leaderboard.js # Reusable leaderboard table component
 │       ├── pages/
 │       │   ├── Login.js       # Login page
 │       │   ├── Signup.js      # Email whitelist-gated registration page
 │       │   ├── FAQ.js         # FAQ search and browsing interface
 │       │   ├── Questions.js   # Discussion Space (Q&A feed)
 │       │   ├── AdminDashboard.js # Mod queue, reports, and FAQ management
+│       │   ├── Leaderboards.js # Leaderboard index page (students + admins)
+│       │   ├── Notifications.js # Notification center page
+│       │   ├── EditProfile.js  # Settings & profile edit page
 │       │   └── AiSupport.js   # Mini Yaksha Chatbot interface
 │       ├── App.js             # Route configuration and authentication guards
 │       └── index.js
